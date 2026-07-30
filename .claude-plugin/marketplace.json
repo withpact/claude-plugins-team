@@ -1,0 +1,17 @@
+{
+  "name": "withpact",
+  "owner": {
+    "name": "Pact",
+    "email": "team@withpact.com"
+  },
+  "metadata": {
+    "description": "Pact's team plugin \u2014 the full bundle (client skills + code-session etiquette) for the people who build with Pact."
+  },
+  "plugins": [
+    {
+      "name": "pact",
+      "source": "./plugins/pact-full",
+      "description": "Pact coordination system plus code-session etiquette: plan and report through beads, and keep Claude Code coding sessions coordinated through beads."
+    }
+  ]
+}

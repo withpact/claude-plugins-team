@@ -1,0 +1,93 @@
+<svg viewBox="0 0 940 540" width="940" height="540" xmlns="http://www.w3.org/2000/svg" role="img" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <title>North Star dependency graph, grouped by gate</title>
+  <desc>North Star (0487) depends on the Speed gate (closed), the Overwhelm gate (blocked on a decision), and unstarted claim-resolution actions. Arrows point to what a bead blocks.</desc>
+  <rect x="0" y="0" width="940" height="540" fill="#ffffff"/>
+  <defs>
+    <marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#6b6b6b"/>
+    </marker>
+  </defs>
+
+  <!-- group containers -->
+  <rect x="20" y="130" width="288" height="232" rx="12" fill="#f1f8f3"/>
+  <rect x="326" y="130" width="288" height="316" rx="12" fill="#fdf0ef"/>
+  <rect x="632" y="130" width="288" height="272" rx="12" fill="#fdf0ef"/>
+
+  <!-- edges: groups block North Star -->
+  <line x1="164" y1="138" x2="395" y2="78" stroke="#6b6b6b" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="470" y1="138" x2="470" y2="80" stroke="#6b6b6b" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="776" y1="138" x2="545" y2="78" stroke="#6b6b6b" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="598" y="112" font-size="11" fill="#6b6b6b" font-style="italic">↑ blocks</text>
+
+  <!-- North Star -->
+  <rect x="338" y="22" width="264" height="56" rx="10" fill="#ffffff" stroke="#d6921f" stroke-width="2.5"/>
+  <text x="470" y="46" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1a1a1a">0487 · North Star</text>
+  <text x="470" y="65" text-anchor="middle" font-size="11.5" fill="#6b6b6b">R: Will · A: Max · due Jun 27 · at risk</text>
+
+  <!-- Speed gate -->
+  <rect x="34" y="146" width="260" height="58" rx="9" fill="#ffffff" stroke="#3a9e5c" stroke-width="2"/>
+  <text x="164" y="170" text-anchor="middle" font-size="13" font-weight="700" fill="#1a1a1a">0548 · Speed gate ✓</text>
+  <text x="164" y="188" text-anchor="middle" font-size="10.5" fill="#6b6b6b">closed · R: Yann/René · A: Will</text>
+
+  <!-- Overwhelm gate -->
+  <rect x="340" y="146" width="260" height="58" rx="9" fill="#ffffff" stroke="#d6453d" stroke-width="2.5"/>
+  <text x="470" y="170" text-anchor="middle" font-size="13" font-weight="700" fill="#1a1a1a">0547 · Overwhelm gate</text>
+  <text x="470" y="188" text-anchor="middle" font-size="10.5" fill="#d6453d">the blocker · overdue Jun 13</text>
+
+  <!-- Claim-resolution -->
+  <rect x="646" y="146" width="260" height="58" rx="9" fill="#ffffff" stroke="#d6453d" stroke-width="2"/>
+  <text x="776" y="170" text-anchor="middle" font-size="13" font-weight="700" fill="#1a1a1a">Claim-resolution</text>
+  <text x="776" y="188" text-anchor="middle" font-size="10.5" fill="#d6453d">all unstarted · overdue Jun 9 · R: Yann</text>
+
+  <!-- internal connectors -->
+  <line x1="164" y1="236" x2="164" y2="206" stroke="#6b6b6b" stroke-width="1.4" marker-end="url(#arr2)"/>
+  <line x1="470" y1="236" x2="470" y2="206" stroke="#6b6b6b" stroke-width="1.4" marker-end="url(#arr2)"/>
+  <line x1="776" y1="236" x2="776" y2="206" stroke="#6b6b6b" stroke-width="1.4" marker-end="url(#arr2)"/>
+
+  <!-- chips: Speed -->
+  <g font-size="11.5" fill="#1a1a1a">
+    <rect x="44" y="238" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="62" cy="254" r="5" fill="#3a9e5c"/><text x="76" y="258">0606 · parallel search 15×</text>
+    <rect x="44" y="278" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="62" cy="294" r="5" fill="#3a9e5c"/><text x="76" y="298">0599 · claim caching</text>
+    <rect x="44" y="318" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="62" cy="334" r="5" fill="#3b82c4"/><text x="76" y="338">0596 · evidence PR (review)</text>
+  </g>
+
+  <!-- chips: Overwhelm -->
+  <g font-size="11.5" fill="#1a1a1a">
+    <rect x="350" y="238" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="368" cy="254" r="5" fill="#3a9e5c"/><text x="382" y="258">0537 · UX mockups</text>
+    <rect x="350" y="278" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="368" cy="294" r="5" fill="#d6921f"/><text x="382" y="298">0634 · screenshot trust</text>
+    <rect x="350" y="318" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="368" cy="334" r="5" fill="#8a8a8a"/><text x="382" y="338">0592 · paragraph viewer</text>
+    <rect x="350" y="358" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="368" cy="374" r="5" fill="#d6921f"/><text x="382" y="378">0647 · DOCX spike</text>
+    <rect x="350" y="400" width="240" height="36" rx="7" fill="#ffffff" stroke="#d6453d" stroke-width="2"/>
+    <text x="470" y="417" text-anchor="middle" font-size="11.5" font-weight="700" fill="#d6453d">⛔ DECIDE: pick direction</text>
+    <text x="470" y="430" text-anchor="middle" font-size="10" fill="#6b6b6b">A: Will · C: Max — gate frozen until then</text>
+  </g>
+
+  <!-- chips: Claim-resolution -->
+  <g font-size="11.5" fill="#1a1a1a">
+    <rect x="656" y="238" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="674" cy="254" r="5" fill="#8a8a8a"/><text x="688" y="258">0501 · edit claim</text>
+    <rect x="656" y="278" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="674" cy="294" r="5" fill="#8a8a8a"/><text x="688" y="298">0502 · restart search</text>
+    <rect x="656" y="318" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="674" cy="334" r="5" fill="#8a8a8a"/><text x="688" y="338">0504 · add evidence</text>
+    <rect x="656" y="358" width="240" height="32" rx="7" fill="#ffffff" stroke="#d9d9d9"/>
+    <circle cx="674" cy="374" r="5" fill="#8a8a8a"/><text x="688" y="378">0505 · unresolved view</text>
+  </g>
+
+  <!-- legend -->
+  <g font-size="11" fill="#6b6b6b">
+    <circle cx="40" cy="500" r="5" fill="#3a9e5c"/><text x="52" y="504">done</text>
+    <circle cx="120" cy="500" r="5" fill="#d6921f"/><text x="132" y="504">in progress</text>
+    <circle cx="232" cy="500" r="5" fill="#3b82c4"/><text x="244" y="504">in review</text>
+    <circle cx="330" cy="500" r="5" fill="#8a8a8a"/><text x="342" y="504">not started</text>
+    <circle cx="440" cy="500" r="5" fill="#d6453d"/><text x="452" y="504">blocker / overdue</text>
+    <text x="600" y="504" font-style="italic">shaded box = one gate's work · ↑ blocks</text>
+  </g>
+</svg>

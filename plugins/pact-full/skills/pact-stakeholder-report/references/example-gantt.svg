@@ -1,0 +1,74 @@
+<svg viewBox="0 0 940 520" width="940" height="520" xmlns="http://www.w3.org/2000/svg" role="img" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <title>North Star milestone Gantt — Cothon, June 16 2026</title>
+  <desc>Beads grouped into the Speed gate, Overwhelm gate and Claim-resolution lanes, plotted against the calendar. Most are overdue against today, Jun 16; the deadline is Jun 27.</desc>
+  <rect x="0" y="0" width="940" height="520" fill="#ffffff"/>
+
+  <!-- group bands + left accents -->
+  <rect x="10" y="76" width="904" height="26" rx="5" fill="#fbf2e3"/>
+  <rect x="10" y="110" width="904" height="92" rx="5" fill="#f1f8f3"/>
+  <rect x="10" y="76" width="4" height="26" fill="#d6921f"/>
+  <rect x="10" y="110" width="4" height="92" fill="#3a9e5c"/>
+  <rect x="10" y="208" width="904" height="140" rx="5" fill="#fdf0ef"/>
+  <rect x="10" y="208" width="4" height="140" fill="#d6453d"/>
+  <rect x="10" y="354" width="904" height="114" rx="5" fill="#fdf0ef"/>
+  <rect x="10" y="354" width="4" height="114" fill="#d6453d"/>
+
+  <!-- top axis ticks -->
+  <g font-size="10.5" fill="#6b6b6b" text-anchor="middle">
+    <text x="250" y="40">Jun 1</text><text x="404" y="40">Jun 8</text><text x="558" y="40">Jun 15</text><text x="712" y="40">Jun 22</text><text x="866" y="40">Jun 29</text>
+  </g>
+
+  <!-- guide lines -->
+  <line x1="580" y1="58" x2="580" y2="468" stroke="#1a1a1a" stroke-width="2"/>
+  <text x="580" y="52" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1a1a1a">TODAY · Jun 16</text>
+  <line x1="646" y1="58" x2="646" y2="468" stroke="#d6453d" stroke-width="1.3" stroke-dasharray="4 3"/>
+  <text x="646" y="68" text-anchor="middle" font-size="10" fill="#d6453d">Will OOO</text>
+  <line x1="822" y1="58" x2="822" y2="468" stroke="#d6921f" stroke-width="1.6" stroke-dasharray="5 3"/>
+  <text x="822" y="52" text-anchor="middle" font-size="10" font-weight="700" fill="#d6921f">DEADLINE</text>
+  <line x1="888" y1="58" x2="888" y2="468" stroke="#6b6b6b" stroke-width="1.2" stroke-dasharray="3 3"/>
+  <text x="888" y="52" text-anchor="middle" font-size="10" fill="#6b6b6b">budget</text>
+
+  <!-- North Star -->
+  <text x="16" y="95" font-size="13" font-weight="700" fill="#1a1a1a">★ North Star · 0487</text>
+  <rect x="816" y="85" width="13" height="13" rx="2" transform="rotate(45 822 91)" fill="#d6921f"/>
+  <text x="842" y="95" font-size="10.5" fill="#6b6b6b">Jun 27</text>
+
+  <!-- Speed gate group -->
+  <text x="16" y="128" font-size="12.5" font-weight="700" fill="#3a9e5c">Speed gate · 0548 ✓</text>
+  <rect x="508" y="118" width="12" height="12" rx="2" transform="rotate(45 514 124)" fill="#3a9e5c"/>
+  <g font-size="11.5" fill="#1a1a1a">
+    <text x="34" y="156">0606 · parallel search 15×</text><rect x="404" y="143" width="88" height="11" rx="3" fill="#3a9e5c"/>
+    <text x="34" y="178">0599 · claim caching</text><rect x="404" y="165" width="44" height="11" rx="3" fill="#3a9e5c"/>
+    <text x="34" y="200">0596 · evidence PR (review)</text><rect x="440" y="187" width="52" height="11" rx="3" fill="#3b82c4"/><rect x="492" y="187" width="88" height="11" rx="3" fill="#d6453d"/>
+  </g>
+
+  <!-- Overwhelm gate group -->
+  <text x="16" y="226" font-size="12.5" font-weight="700" fill="#d6453d">Overwhelm gate · 0547  (overdue)</text>
+  <rect x="508" y="216" width="12" height="12" rx="2" transform="rotate(45 514 222)" fill="#d6453d"/>
+  <g font-size="11.5" fill="#1a1a1a">
+    <text x="34" y="250">0537 · UX mockups ‹May 21</text><circle cx="262" cy="246" r="5" fill="#3a9e5c"/>
+    <text x="34" y="272">0634 · screenshot trust</text><rect x="360" y="263" width="88" height="11" rx="3" fill="#d6921f"/><rect x="448" y="263" width="132" height="11" rx="3" fill="#d6453d"/>
+    <text x="34" y="294">0592 · paragraph viewer</text><rect x="572" y="288" width="14" height="11" rx="2" transform="rotate(45 579 293)" fill="#8a8a8a"/>
+    <text x="34" y="316">0647 · DOCX spike</text><rect x="420" y="307" width="72" height="11" rx="3" fill="#d6921f"/><rect x="492" y="307" width="88" height="11" rx="3" fill="#d6453d"/>
+    <text x="34" y="338" font-weight="700" fill="#d6453d">⛔ Decide direction</text><rect x="640" y="332" width="12" height="12" rx="2" transform="rotate(45 646 338)" fill="#d6453d"/><text x="662" y="338" font-size="10" fill="#d6453d">by Jun 19</text>
+  </g>
+
+  <!-- Claim-resolution group -->
+  <text x="16" y="372" font-size="12.5" font-weight="700" fill="#1a1a1a">Claim-resolution · R: Yann  (overdue Jun 9)</text>
+  <g font-size="11.5" fill="#1a1a1a">
+    <text x="34" y="396">0501 · edit claim</text><rect x="426" y="383" width="154" height="11" rx="3" fill="#d6453d"/>
+    <text x="34" y="418">0502 · restart search</text><rect x="426" y="405" width="154" height="11" rx="3" fill="#d6453d"/>
+    <text x="34" y="440">0504 · add evidence</text><rect x="426" y="427" width="154" height="11" rx="3" fill="#d6453d"/>
+    <text x="34" y="462">0505 · unresolved view</text><rect x="426" y="449" width="154" height="11" rx="3" fill="#d6453d"/>
+  </g>
+
+  <!-- legend -->
+  <g font-size="11" fill="#6b6b6b">
+    <rect x="16" y="496" width="16" height="9" rx="2" fill="#3a9e5c"/><text x="38" y="504">done</text>
+    <rect x="96" y="496" width="16" height="9" rx="2" fill="#d6921f"/><text x="118" y="504">in progress</text>
+    <rect x="204" y="496" width="16" height="9" rx="2" fill="#3b82c4"/><text x="226" y="504">review</text>
+    <rect x="286" y="496" width="16" height="9" rx="2" fill="#d6453d"/><text x="308" y="504">overdue / slipping</text>
+    <rect x="430" y="495" width="11" height="11" rx="2" transform="rotate(45 435 500)" fill="#8a8a8a"/><text x="452" y="504">milestone / due</text>
+    <text x="600" y="504" font-style="italic">shaded lane = one gate's work</text>
+  </g>
+</svg>
