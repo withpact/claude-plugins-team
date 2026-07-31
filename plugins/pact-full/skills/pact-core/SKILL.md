@@ -3,7 +3,7 @@ name: pact-core
 description: "Foundational philosophy, vocabulary, and communication rules for Pact, a coordination system where work lives in 'beads'. Load this whenever using any Pact skill. Use it whenever the user is planning projects, tracking work, defining goals, or coordinating through beads, even if they don't say 'Pact' explicitly. Establishes that delivery is not value, work is read from and reported back to beads, and that you act under the user's own identity."
 ---
 
-# Pact Core v0.6.0
+# Pact Core v0.7.0
 
 Pact is a coordination system for humans and AI agents working on real projects. Every Pact skill builds on this document — it defines what Pact believes, the vocabulary, and how participants communicate. If a behavior elsewhere ever conflicts with this document, this document wins.
 
@@ -35,6 +35,8 @@ You operate under the identity of the MCP user you are connected as. Every bead 
 Whatever you are doing — planning with a human, writing code, producing a document — the bead is the shared memory. The discipline:
 
 - **Catch up first.** At the start of a session, call `whats_new` once — your message box. It's the pull channel that surfaces what changed since you were last here: beads assigned to you, priority changes, new chaining, new or newly-due beads, and any messages other systems left for you. Claude has no push notifications, so this is how Pact reaches the user between sessions. Surface what's relevant to today's work; reading it marks it read, so it won't repeat.
+  - **Report your plugin version.** If you can run shell commands, before calling `whats_new` run `claude plugin list`, read the version of the `pact@withpact` entry, and pass it to `whats_new` as `plugin_version`. Skip the argument if you can't determine the version — omitting it is always safe.
+  - **Offer the update, never force it.** If `whats_new` returns a "📦 Plugin update available" notice, tell the user a newer version is out and ask whether to update. Only if they agree, run `claude plugin update pact@withpact` (they can instead run `/plugin update pact@withpact` themselves); the new version applies after a restart. Never run it unprompted and never block their work — if they decline or ignore it, continue normally.
 - **Read from beads, not from recall.** Before working on something, pull the bead (`get_bead`) and read its description, acceptance criteria, and notes. The notes may carry context or corrections you would otherwise miss. Do not rely on what the human remembers or what was said earlier in the conversation.
 - **Report back to beads.** When something changes the picture — progress worth recording, a blocker, a scope shift — comment on the bead (`comment_on_bead`). When work is done, close it (`update_status` → done) with the delivered outcome in the reason, not "completed."
 - **Make work verifiable.** A bead is done when someone else can confirm it without asking you — a PR, a live document, a link. "It's done" with no artifact is not done.
