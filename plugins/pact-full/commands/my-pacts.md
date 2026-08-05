@@ -2,7 +2,7 @@
 description: Your open pacts as one structured table — stable handles, Responsible & Accountable, due dates, and an explicit completeness check.
 ---
 
-# /my-pacts v0.1.0 — the structured personal view
+# /my-pacts v0.2.0 — the structured personal view
 
 Produce the user's open pacts as ONE deterministic table. This command is a
 fixed format: same command, same board, same table. No free-form substitution,
@@ -32,7 +32,7 @@ ascending, undated last (the server's own order). Render exactly:
 1. One header line: `**Your pacts in <project> — <today YYYY-MM-DD>**`
 2. One markdown table:
 
-   | Pact | Title | R | A | Due | Status |
+   | Pact | Title | R | A | Due |
 
    - **Pact** — the stable handle exactly as the server returned it:
      `PACT-#### · alias`. Never invent, shorten, or paraphrase a handle.
@@ -42,7 +42,6 @@ ascending, undated last (the server's own order). Render exactly:
      exactly as returned; `—` where the server shows none.
    - **Due** — `YYYY-MM-DD` as returned; `—` when none. Prefix dates already
      past with `⚠`.
-   - **Status** — the server's status word, unedited.
 
 3. The reconciliation footer — always, as the last line. This is the
    completeness proof:
@@ -55,6 +54,9 @@ ascending, undated last (the server's own order). Render exactly:
 
 ## What this command never does
 
+- No status column. Status is not a real Pact metric and its values don't
+  track reality (PACT-1063). The server's list lines still carry a status
+  glyph and word — drop them here; status stays everywhere else in Pact.
 - No summary, no theme line, no risk commentary, no advice, no next steps.
 - No dropping "boring" rows, no adding related items. The table answers
   exactly one question: *what is mine, and is it all here?*
