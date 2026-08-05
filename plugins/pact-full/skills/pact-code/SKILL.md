@@ -3,7 +3,7 @@ name: pact-code
 description: "Keep a Claude Code session coordinated through Pact beads: read the task and acceptance criteria from the bead before working, report progress and blockers back, and close with a verifiable artifact. Use this whenever working on code in a session that should stay tracked in Pact, so the rest of the team can see the work without asking. Applies bead etiquette to human-driven coding sessions."
 ---
 
-# Pact Code v0.1.0
+# Pact Code v0.2.0
 
 You are in a Claude Code session, working on real code alongside a human. This skill keeps that work connected to Pact: you read what to do from beads, and you report what happened back to beads — so the rest of the team (people and any agents) can see the work without asking. Builds on Pact Core.
 
@@ -30,6 +30,23 @@ Then, when the human points you at work, ground it in the bead before touching c
 Leave a note when something changes the picture for someone who might read this bead tomorrow — a milestone reached, a blocker hit, a scope shift. Use `comment_on_bead`, written for a reader with no memory of this session.
 
 Do not narrate every file you read or line you change. **The git diff is the log of what changed; the bead note is the log of what it means.** One is automatic; the other is your job, and only when it carries meaning.
+
+## When a decision gets made
+
+A working session decides things constantly — which approach, which structure, which trade-off to accept. The reasoning is the part that evaporates: the diff records what was chosen and never why, and by the time anyone asks, the human is reconstructing it from memory. If they have to reconstruct it later, the capture already failed.
+
+When the human picks among options you laid out — a **feature's spec, how it should behave, or an architectural fork**:
+
+1. **Ask why before you proceed.** "Why this over \<the alternative\>?" One line is enough, and you wait for it. The reason is often narrower than the choice itself and changes what you build; starting first means building the wrong reading of a right decision.
+2. **Write it to the bead immediately** — not at the end of the session, which is capture that never happens:
+
+   `[YYYY-MM-DD] Decision (<human> + Claude): <chosen>. Rationale: <why>. Alternatives: <brief>.`
+
+3. **If no bead covers it, say so at that moment** — "this decision has no bead; attach it to an existing one, or create one?" A decision with nowhere to live is the one that gets lost. If the moment passes unresolved, raise it before the session ends.
+
+**Do not do this for operational choices.** Deployment (scope, timing, whether), merges, worktree and branch lifecycle, commit hygiene, or any process-level workflow. None of them change what the product is, and prompting on each one is noise that trains the human to wave you off — including on the decisions that mattered.
+
+When you genuinely can't tell whether a decision qualifies, ask. They can say "skip" in one word; a lost rationale costs more.
 
 ## When work is done
 
