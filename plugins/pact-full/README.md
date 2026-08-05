@@ -20,6 +20,16 @@ And one slash command:
 
 - **/my-pacts** — your open pacts as one structured table: stable `PACT-#### · alias` handles, Responsible & Accountable, due dates, and a completeness check. Same command, same table, every time.
 
+## The one automatic check (Claude Code only)
+
+The hardest thing to keep alive in a coding session is the answer to *"what got done?"*. Claude writes the code, the session ends, and the project is quietly a day out of date.
+
+So this plugin watches for exactly that case. When Claude finishes a turn in Claude Code, it checks three things: did this session look at Pact, did the code change, and was anything written back to a bead. If the first two are true and the third isn't, Claude is asked to log what happened before it finishes.
+
+It stays quiet the rest of the time — in repositories where you never opened Pact, in sessions where nothing changed, and in sessions where the work was already logged. It speaks at most once per session, and it never blocks your work.
+
+Nothing to install or configure; it arrives with the plugin. To switch it off, set `PACT_STOP_HOOK=off` in your environment.
+
 ## Setup
 
 1. Install this plugin.
