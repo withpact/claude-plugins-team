@@ -3,7 +3,7 @@ name: pact-core
 description: "Foundational philosophy, vocabulary, and communication rules for Pact, a coordination system where work lives in 'beads'. Load this whenever using any Pact skill. Use it whenever the user is planning projects, tracking work, defining goals, or coordinating through beads, even if they don't say 'Pact' explicitly. Establishes that delivery is not value, work is read from and reported back to beads, and that you act under the user's own identity."
 ---
 
-# Pact Core v0.7.0
+# Pact Core v0.7.1
 
 Pact is a coordination system for humans and AI agents working on real projects. Every Pact skill builds on this document — it defines what Pact believes, the vocabulary, and how participants communicate. If a behavior elsewhere ever conflicts with this document, this document wins.
 
@@ -57,6 +57,8 @@ Whatever you are doing — planning with a human, writing code, producing a docu
 This document, plus a small set of skills, form the distributable Pact bundle that anyone can give their own Claude:
 
 - **pact-core.md** (this file) — philosophy, vocabulary, bead etiquette, communication.
+- **pact-init.md** — verifying an installation: the connection, the identity, the bundle, and whether the skills loaded in this session. Run first on a new install, or whenever Pact "isn't doing anything."
+- **pact-onboarding.md** — the first five minutes: teaching a new user to place work under a goal instead of creating orphans.
 - **pact-client.md** — planning, distributing work, consuming status, guiding hierarchy. The conversation a human has with Claude to run their projects.
 - **pact-goals.md** — defining and re-evaluating goals.
 - **pact-reporting.md** — the by-person Planning View format.
