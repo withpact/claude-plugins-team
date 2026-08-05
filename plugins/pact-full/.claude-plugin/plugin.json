@@ -1,6 +1,6 @@
 {
   "name": "pact",
-  "version": "0.13.0",
+  "version": "0.12.0",
   "description": "Pact coordination system: plan projects, define goals, structure work, produce milestone-and-ownership reports and planning views, and keep coding sessions coordinated through beads. The planning and reporting assistant plus code-session etiquette.",
   "author": {
     "name": "Pact"
