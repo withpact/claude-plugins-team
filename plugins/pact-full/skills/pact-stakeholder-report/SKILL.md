@@ -14,7 +14,7 @@ description: >-
   is working on what, use the Pact planning view instead.
 ---
 
-# Stakeholder Milestone Report v0.2.1
+# Stakeholder Milestone Report v0.3.0
 
 ## What this produces
 
@@ -56,6 +56,13 @@ wrong call. Name the work a person actually did (mockups, a spike, a shipped fix
 Also scan the anchor's and gates' notes for **hard dates and constraints** that change the verdict:
 an owner going OOO, a budget/runway window, an external dependency. These often matter more than any
 single task.
+
+Collect the project's **documented wins** as you walk: beads tagged `win` (`list_beads` with
+`tag: win`) and notes prefixed `WIN:` — written by pact-win-detection or by hand. A win is a
+client-side outcome (a meeting booked from a generated lead, a renewal, recurring unaided use),
+which makes it the strongest form of delivered evidence: credit it by name, and let it reach the
+verdict when it drives the commercial call. When no win sweep has run recently, run
+pact-win-detection first if it is available in this session.
 
 ## Step 3 — Read what this stakeholder cares about
 
