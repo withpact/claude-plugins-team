@@ -2,7 +2,7 @@
 description: Close one pact the right way — show its acceptance criteria, demand the artifact, write the contrast against each criterion, and only then close. Names divergence instead of closing green.
 ---
 
-# /close-pact v0.1.0 — the closing procedure
+# /close-pact v0.2.0 — the closing procedure
 
 Run the closing procedure for ONE pact and write the result to Pact.
 
@@ -172,9 +172,9 @@ WHAT GOT DELIVERED + WHERE IT IS VERIFIED, in one line.
 - No congratulating, no evaluating performance, no commenting on the project's pace.
 - No closing more than one pact per invocation.
 
-## Relationship with /wrap-up
+## Relationship with /day-review
 
-`/wrap-up` closes the day and reports what moved. When the user says there
-"PACT-XXXX ya lo terminé, ciérralo", `/wrap-up` does NOT close directly — it
+`/day-review` closes the day and reports what moved. When the user says there
+"PACT-XXXX ya lo terminé, ciérralo", `/day-review` does NOT close directly — it
 invokes this procedure. The gain from the contrast disappears if there is a back
 door that closes without it.

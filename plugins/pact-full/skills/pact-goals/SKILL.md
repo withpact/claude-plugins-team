@@ -3,7 +3,7 @@ name: pact-goals
 description: "Define and re-evaluate the goal of a project before and during work. Use this whenever the user is starting a new project, planning a week without a clear goal yet, asking what to focus on, preparing for an upcoming demo, or when it has been about a week since the project's goal was last revisited. Produces a goal-and-milestone structure with human-evaluable success criteria. Make sure to use this when success looks fuzzy or undefined."
 ---
 
-# Pact Goals v0.6.0
+# Pact Goals v0.7.0
 
 The conversation that defines success before work starts — and keeps redefining it as work progresses. Builds on Pact Core; activates from Pact Client when the user is starting a new project, planning without a clear goal, preparing for a demo, or when the goal hasn't been revisited in about a week.
 
@@ -84,11 +84,15 @@ two runs of the same check-in return different-looking things, because the outpu
 gets composed on the fly from a description of *what* to present instead of a
 literal format.
 
+Users reach this through `/week-goal`, the Monday command of the weekly flow. That
+command is a thin surface over this skill — it does not restate the template, and
+this section stays the single source of truth for it.
+
 This is the block. Reproduce it exactly — every heading, every blank line, every
 label, in this order. Substitute only the values in `{...}`.
 
 ```
-# Goal de la semana: {GOAL_ID} · {GOAL_SLUG}
+# Meta de la semana: {GOAL_ID} · {GOAL_SLUG}
 
 {ONE_LINE_OUTCOME}
 
@@ -194,7 +198,7 @@ conversation. If it isn't clear, English. Never a translation produced on the sp
 
 | ES | EN |
 |----|----|
-| `# Goal de la semana:` | `# Goal of the week:` |
+| `# Meta de la semana:` | `# Week goal:` |
 | `Entrega:` | `Due:` |
 | `Responsable:` | `Owner:` |
 | `Aprueba:` | `Approves:` |
@@ -210,7 +214,7 @@ Days and months are abbreviated in the corresponding language (`21 ago` / `21 Au
 Data: PACT-1083, three milestones, none started, `demo` tag on PACT-1085.
 
 ```
-# Goal de la semana: PACT-1083 · minimalWeeklyFlow
+# Meta de la semana: PACT-1083 · minimalWeeklyFlow
 
 Que un proyecto ejecute un flujo semanal estándar sin depender
 de que el modelo interprete la intención.

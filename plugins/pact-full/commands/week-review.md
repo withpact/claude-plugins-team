@@ -2,19 +2,19 @@
 description: Close the week on the goal with two separate verdicts — delivery and client outcome — and force a decision on every milestone that didn't land. No milestone is left in limbo.
 ---
 
-# /week-review v0.1.0 — the week close, with a forced decision
+# /week-review v0.2.0 — the week close, with a forced decision
 
 Close the week. This is the last of the five moments of the minimal weekly flow:
 
 ```
-Lunes    /pact-goals     fija el goal de la semana
-Diario   /standup-prep   abre el día
+Lunes    /week-goal      fija la meta de la semana
+Diario   /day-start      abre el día
          /close-pact     cierra trabajo entregado
-         /wrap-up        cierra el día
-Viernes  /week-review    ¿llegó el goal? y qué pasa con lo que no
+         /day-review     cierra el día
+Viernes  /week-review    ¿llegó la meta? y qué pasa con lo que no
 ```
 
-Without this moment, `/pact-goals` starts Monday in Periodic mode assuming
+Without this moment, `/week-goal` starts Monday in Periodic mode assuming
 somebody evaluated the previous week. Nobody evaluated it.
 
 It is the twin of `/close-pact` one level up: same contrast against acceptance
@@ -31,7 +31,7 @@ Where a Pact skill rule conflicts with this file for this command, THIS FILE WIN
 1. `get_bead` on the week's goal → acceptance criteria, assumptions, `depends_on`.
 2. `get_bead` on each milestone under the goal → status, its own criterion, notes.
 3. `search_beads` with `tag: win`, `updated_since: {Monday of this week}` → the
-   wins `/wrap-up` recorded.
+   wins `/day-review` recorded.
 4. `search_beads` with `updated_since: {Monday}`, `include_closed: true`,
    `status: done` → what closed during the week.
 
@@ -45,7 +45,7 @@ Reproduce this exactly — every heading, every blank line, every label, in this
 order. Substitute only the values in `{...}`.
 
 ```
-# Week review — {GOAL_ID} · {GOAL_SLUG}
+# Cierre de semana — {GOAL_ID} · {GOAL_SLUG}
 Semana del {MONDAY} al {FRIDAY} · {PROJECT}
 
 ## Entrega
@@ -81,7 +81,7 @@ splits in two and **NEVER collapses into one**:
 - **Entrega** — were the goal's acceptance criteria met? Answered against the
   pact, with artifacts.
 - **Resultado** — did anything move on the client's side? Answered from what the
-  user reports and from the `WIN:` notes `/wrap-up` left during the week.
+  user reports and from the `WIN:` notes `/day-review` left during the week.
 
 The two can come out different and almost always do. If the command joins them,
 Friday always comes out green. A goal delivered with no commercial movement is
@@ -216,6 +216,7 @@ isn't clear, English. Never translate on the spot.
 
 | ES | EN |
 |----|----|
+| `# Cierre de semana —` | `# Week review —` |
 | `Semana del {MONDAY} al {FRIDAY} ·` | `Week of {MONDAY} to {FRIDAY} ·` |
 | `## Entrega` | `## Delivery` |
 | `## Resultado para el cliente` | `## Client outcome` |
@@ -229,8 +230,8 @@ fixedly. They are never reformulated.
 
 ## Out of scope
 
-- It does not set next week's goal. That is `/pact-goals` on Monday.
+- It does not set next week's goal. That is `/week-goal` on Monday.
 - It does not close individual day-to-day pacts. That is `/close-pact`.
 - It does not produce the stakeholder brief. That is `pact-stakeholder-report`,
   which can run afterwards with the board already clean.
-- It does not sweep retroactively for wins. It reads the ones `/wrap-up` recorded.
+- It does not sweep retroactively for wins. It reads the ones `/day-review` recorded.

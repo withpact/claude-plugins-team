@@ -20,12 +20,15 @@ This plugin installs nine skills that activate on their own when relevant:
 And five slash commands. Unlike the skills, these are things you run on purpose — each one produces the same shape every time, so you can compare two runs side by side without re-reading them:
 
 - **/my-pacts** — your open pacts as one structured table: stable `PACT-#### · alias` handles, Responsible & Accountable, due dates, and a completeness check. Same command, same table, every time.
-- **/standup-prep** — run it ~15 minutes before the daily client standup. What's in progress (yours and the team's), a proposed plan for today you're meant to correct, and the things you might need from someone — quoted straight from the notes, marked as unconfirmed. For you, not for the client. It writes nothing.
+- **/week-goal** — Monday. Sets the week's goal, or re-checks the one you have, and shows it as one block: the outcome in a line, who owns it, when it's due, and every milestone hanging off it in aligned columns.
+- **/day-start** — opens the day. Run it first thing, or ~15 minutes before the client standup if the project has one. What's in progress (yours and the team's), a proposed plan for today you're meant to correct, and the things you might need from someone — quoted straight from the notes, marked as unconfirmed. For you, not for the client. It writes nothing.
 - **/close-pact** — close one pact properly: it shows you the acceptance criteria, asks what you delivered and where it can be verified, writes the contrast criterion by criterion, and only then closes. If what you delivered doesn't cover a criterion, it says so instead of closing green.
-- **/wrap-up** — end of the day. It shows what actually got recorded (usually less than what happened — that's the point), asks whether anything moved for the client, and writes down whatever you dictate. It never closes a pact; that goes through `/close-pact`.
-- **/week-review** — end of the week, on the goal. Two verdicts that never merge into one: did we deliver, and did anything move for the client. Then every milestone that didn't land gets a decision — new date, trimmed, or dropped with a reason. Nothing is left for "we'll see on Monday."
+- **/day-review** — closes the day. It shows what actually got recorded (usually less than what happened — that's the point), asks whether anything moved for the client, and writes down whatever you dictate. It never closes a pact; that goes through `/close-pact`.
+- **/week-review** — closes the week, on the goal. Two verdicts that never merge into one: did we deliver, and did anything move for the client. Then every milestone that didn't land gets a decision — new date, trimmed, or dropped with a reason. Nothing is left for "we'll see on Monday."
 
-Together they cover a week: `/pact-goals` sets the goal on Monday, `/standup-prep` opens each day, `/close-pact` closes work as it lands, `/wrap-up` closes each day, `/week-review` closes the week.
+They're named by **when you run them**, so the `/` menu reads as the week itself: `/week-goal` Monday, then `/day-start` → `/close-pact` → `/day-review` through the day, and `/week-review` on Friday.
+
+The old names `/standup-prep` and `/wrap-up` still work for now — they tell you the new name and then do the same thing. They go away in the next release.
 
 ## The one automatic check (Claude Code only)
 
