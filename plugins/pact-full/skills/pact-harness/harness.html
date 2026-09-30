@@ -72,6 +72,44 @@ button{font:inherit;color:inherit}
 .dr.on{transform:none}
 .dr>*{flex:none}
 .dr pre{white-space:pre-wrap;font:12.5px/1.5 var(--body);margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow-wrap:anywhere}
+/* ported from /harness: date boxes, timeline, theme groups, people */
+.hrow{display:flex;gap:10px;align-items:center}
+.date{display:grid;place-items:center;min-width:44px;padding:4px 6px;border-radius:8px;background:var(--surface-2);line-height:1.05;text-align:center;flex:none}
+.date b{font-size:18px}
+.date span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+.date.late{background:var(--warn-soft)} .date.late b,.date.late span{color:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap;font-weight:500}
+.chip.late{background:var(--warn-soft);color:var(--warn)} .chip.go{background:var(--p-soft);color:var(--p)} .chip.ok{background:var(--a-soft);color:var(--a)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--a);flex:none}
+.dot.warn{background:var(--warn)}
+.av{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;font-size:10.5px;font-weight:700;background:var(--surface-2);color:var(--ink-2);border:2px solid var(--surface);flex:none}
+.av.pact{background:var(--p-soft);color:var(--p)}
+.avs{display:flex}.avs .av+.av{margin-left:-6px}
+.spread{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.tl{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 12px 6px;overflow-x:auto}
+.tl-in{min-width:520px;display:grid;grid-template-columns:140px 1fr;row-gap:3px;font-size:12px}
+.tl-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2);padding-right:8px;line-height:20px}
+.tl-t{position:relative;height:20px;border-bottom:1px dashed var(--line)}
+.tl-t .pt{position:absolute;top:5px;width:10px;height:10px;border-radius:50%;background:var(--p);transform:translateX(-5px)}
+.tl-t .pt.late{background:var(--warn)}
+.tl-today{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);opacity:.5}
+.tl-ax{position:relative;height:18px;font-size:10.5px;color:var(--ink-3)}
+.tl-ax span{position:absolute;transform:translateX(-50%)}
+.agrp{display:grid;gap:8px}
+.agrp-h{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:6px 10px;border-radius:8px;background:var(--a-soft)}
+.agrp-h b{color:var(--a)} .agrp-h.warn{background:var(--warn-soft)} .agrp-h.warn b{color:var(--warn)}
+.agrp-h:focus-visible{outline:2px solid var(--focus)}
+.card.tint{border-left:4px solid var(--a)} .card.tint.warn{border-left-color:var(--warn)}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.trio div{display:grid;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px}
+.trio b{font-size:22px} .trio b.w{color:var(--warn)}
+.trio span{font-size:11px;color:var(--ink-3)}
+.eb{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:600}
+.dbox{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:4px;font-size:13.5px}
+.dbox.warn{background:var(--warn-soft);border-color:transparent} .dbox.warn .eb{color:var(--warn)}
+.dbox ol{margin:0;padding-left:18px;display:grid;gap:2px}
+.dr h3{font-size:13px;color:var(--ink-3);margin:6px 0 0}
 .skel{height:14px;border-radius:6px;background:var(--surface-2);margin:10px 12px}
 </style>
 
@@ -97,7 +135,7 @@ button{font:inherit;color:inherit}
 // Filled in by the pact-harness skill: one entry per Pact connector the user has.
 // key = project name (from whoami), server = the connector's display name.
 const PROJECTS = __PROJECTS__;
-const TABS = [["activity","Activity"],["projects","Projects"],["themes","Themes"],["people","People"],["archive","Archive"]];
+const TABS = [["activity","Activity"],["projects","Projects"],["themes","Themes"],["people","Resources"],["archive","Archive"]];
 const CLOSED = new Set(["done","cancelled"]);
 const TODAY = new Date().toISOString().slice(0,10);
 
@@ -206,10 +244,25 @@ function shape(project,goals,open,doneGoals,history,historyErr,storedAt){
     g.total=g.children.length; g.closed=g.children.filter(c=>CLOSED.has(c.status)).length;
     g.late=!!(g.due&&g.due<TODAY); g.openParents=g.parents.filter(p=>goalIds.has(p.id));
   }
+  const gById=new Map(goals.map(g=>[g.id,g]));
+  for(const g of goals){
+    g.open=g.children.filter(c=>!CLOSED.has(c.status)&&!goalIds.has(c.id)).map(c=>({...c,...(byId.get(c.id)||{}),status:c.status}));
+    g.open.sort((a,b)=>(b.status==="blocked")-(a.status==="blocked")||(a.due||"9").localeCompare(b.due||"9"));
+    g.blockedKids=g.open.filter(o=>o.status==="blocked").length;
+    g.lateKids=g.open.filter(o=>o.due&&o.due<TODAY).length;
+    g.attention=g.late||g.blockedKids>0||g.lateKids>0;
+  }
+  const rootOf=g=>{const seen=new Set();let x=g;while(x.openParents.length&&!seen.has(x.id)){seen.add(x.id);x=gById.get(x.openParents[0].id)||x;if(seen.has(x.id))break}return x};
   const projects=goals.filter(g=>g.due).sort((a,b)=>a.due.localeCompare(b.due));
   const roots=goals.filter(g=>!g.openParents.length);
-  const subtree=g=>{const seen=new Set();const walk=x=>{for(const c of x.children){if(seen.has(c.id))continue;seen.add(c.id);const cg=goals.find(y=>y.id===c.id);if(cg)walk(cg)}};walk(g);return [...seen].map(id=>byId.get(id)).filter(Boolean)};
-  const themes=roots.map(g=>{const items=subtree(g);return{...g,items,openItems:items.filter(i=>!CLOSED.has(i.status))}}).sort((a,b)=>b.openItems.length-a.openItems.length);
+  const subtree=g=>{const seen=new Set();const walk=x=>{for(const c of x.children){if(seen.has(c.id))continue;seen.add(c.id);const cg=gById.get(c.id);if(cg)walk(cg)}};walk(g);return [...seen].map(id=>byId.get(id)).filter(Boolean)};
+  const themes=roots.map(g=>{
+    const items=subtree(g);
+    const projs=projects.filter(p=>rootOf(p).id===g.id);
+    const tasks=items.filter(i=>!CLOSED.has(i.status)&&!goalIds.has(i.id)).map(i=>({...i,...(byId.get(i.id)||{})}));
+    const attn=tasks.filter(o=>o.status==="blocked"||(o.due&&o.due<TODAY));
+    return{...g,items,openItems:items.filter(i=>!CLOSED.has(i.status)),projs,tasks,attn,warn:attn.length>0||projs.some(p=>p.attention)};
+  }).sort((a,b)=>b.projs.length-a.projs.length||b.tasks.length-a.tasks.length);
   const tasks=open.filter(b=>!goalIds.has(b.id));
   const unfiled=tasks.filter(b=>!filed.has(b.id));
 
@@ -229,7 +282,14 @@ function shape(project,goals,open,doneGoals,history,historyErr,storedAt){
   const fallbackFeed=[];
   if(!history){ for(const g of goals) for(const n of g.notes||[]) fallbackFeed.push({bead_id:g.id,action:"note",timestamp:n.date,changed_by:n.who,reason:n.text,title:g.title,changes:{}}); fallbackFeed.sort((a,b)=>b.timestamp.localeCompare(a.timestamp)); }
 
-  return {project,goals,open,doneGoals,projects,themes,tasks,unfiled,people:[...people.values()].sort((a,b)=>b.items.length-a.items.length),closeCands,feed,fallbackFeed,historyErr,storedAt,byId};
+  const res=new Map();
+  const R=n=>{if(!n||n==="unassigned"||n==="—")return null;if(!res.has(n))res.set(n,{name:n,responsible:[],accountable:[],tasks:[],stuck:0});return res.get(n)};
+  for(const g of goals){R(g.assignee)?.responsible.push(g);R(g.approver)?.accountable.push(g)}
+  for(const t of tasks){const r=R(t.assignee);if(r){r.tasks.push(t);if(t.status==="blocked"||(t.due&&t.due<TODAY))r.stuck++}}
+  const resources=[...res.values()].sort((a,b)=>(b.responsible.length+b.tasks.length)-(a.responsible.length+a.tasks.length));
+  for(const r of resources) r.tasks.sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
+
+  return {project,goals,gById,open,doneGoals,projects,themes,tasks,unfiled,resources,people:[...people.values()].sort((a,b)=>b.items.length-a.items.length),closeCands,feed,fallbackFeed,historyErr,storedAt,byId};
 }
 
 /* ---------- rendering ---------- */
@@ -239,7 +299,7 @@ function rowHTML(b,extra){
   return `<div class="row" data-id="${esc(b.id)}" tabindex="0" role="button">${status(b.status)}<span class="t"><span class="mono dim">${esc(b.id)}</span> ${esc(b.title)}</span><span class="s">${extra??(b.due?`<span class="${late?"k late":""}">${esc(fmtDay(b.due))}</span>`:"")}</span></div>`;
 }
 function renderTabs(){
-  const d=data; const n={activity:(d.feed||d.fallbackFeed).length,projects:d.projects.length,themes:d.themes.length,people:d.people.length,archive:d.doneGoals.length};
+  const d=data; const n={activity:(d.feed||d.fallbackFeed).length,projects:d.projects.length,themes:d.themes.length,people:d.resources.length,archive:d.doneGoals.length};
   $("#tabs").innerHTML=TABS.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${state.tab===k}" data-tab="${k}"><b>${n[k]}</b><span>${l}</span></button>`).join("");
 }
 function render(){
@@ -268,7 +328,7 @@ function activityHTML(d){
   h+= d.closeCands.length? d.closeCands.map(g=>`<div class="cl"><div><div class="t" data-id="${esc(g.id)}"><span class="mono dim">${esc(g.id)}</span> ${esc(g.title)}</div><div class="ev">${esc(g.evidence)}</div></div><button class="btn pri" data-approve="${esc(g.id)}" type="button">Approve</button></div>`).join("")
     : `<div class="empty">No open goal has all of its children closed.</div>`;
   h+=`</div>`;
-  if(d.unfiled.length) h+=`<div class="banner">${d.unfiled.length} open task${d.unfiled.length>1?"s":""} aren't under any goal — <button class="btn" data-tab="people" type="button">see them by person</button></div>`;
+  if(d.unfiled.length) h+=`<div class="banner">${d.unfiled.length} open task${d.unfiled.length>1?"s":""} aren't under any goal — <button class="btn" data-open="unfiled:1" type="button">see which</button></div>`;
   const feed=d.feed||d.fallbackFeed;
   if(!d.feed) h+=`<div class="banner">Showing goal notes only. The full history (status moves, creations, every note) needs the <b>list_history</b> tool — reconnect ${esc(PROJECTS[d.project].server)} once it's deployed.</div>`;
   h+=`<div class="box"><div class="box-h"><h2>Last 14 days</h2><span class="dim">${feed.length} changes</span></div>`;
@@ -283,24 +343,54 @@ function activityHTML(d){
   }
   return h+`</div>`;
 }
-function goalCard(g,sub){
-  const pct=g.total?Math.round(100*g.closed/g.total):0;
-  return `<button class="card ${g.late?"late":""}" data-id="${esc(g.id)}" type="button"><span class="t">${esc(g.title)}</span>
-    <span class="meta"><span class="mono">${esc(g.id)}</span>${status(g.status)}${g.due?`<span class="${g.late?"k late":""}">due ${esc(fmtDay(g.due))}</span>`:""}</span>
-    <span class="pbar"><i style="width:${pct}%"></i></span>
-    <span class="meta"><span>${g.closed}/${g.total} done</span><span>${esc(g.assignee)}</span>${sub?`<span>${esc(sub)}</span>`:""}</span></button>`;
+const MES=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+const dd=d=>d?+d.slice(8,10):"—", mm=d=>d?MES[+d.slice(5,7)-1]:"no date";
+const dateBox=d=>`<div class="date ${d&&d<TODAY?"late":""}"><b>${dd(d)}</b><span>${mm(d)}</span></div>`;
+const initials=n=>(n||"?").split(/\s+/).filter(Boolean).map(x=>x[0]).slice(0,2).join("").toUpperCase();
+const av=(n,cls="")=>`<span class="av ${cls}" title="${esc(n||"Unassigned")}">${esc(initials(n))}</span>`;
+const STL={not_started:"Not started",in_progress:"In progress",blocked:"Blocked",review:"In review",done:"Done",cancelled:"Cancelled"};
+const STC={in_progress:"go",blocked:"late",review:"ok",done:"ok"};
+const chipSt=s=>`<span class="chip ${STC[s]||""}">${STL[s]||esc(s)}</span>`;
+function timeline(rows){
+  rows=rows.filter(p=>p.due); if(!rows.length) return "";
+  const ds=rows.map(p=>p.due).concat([TODAY]).sort();
+  const t0=new Date(ds[0]+"T00:00:00");t0.setDate(t0.getDate()-10);
+  const t1=new Date(ds[ds.length-1]+"T00:00:00");t1.setDate(t1.getDate()+15);
+  const span=t1-t0, x=d=>((new Date(d+"T00:00:00")-t0)/span*100).toFixed(2)+"%";
+  const ticks=[];const c=new Date(t0);c.setDate(1);c.setMonth(c.getMonth()+1);while(c<t1){ticks.push(c.toISOString().slice(0,10));c.setMonth(c.getMonth()+1)}
+  return `<div class="tl"><div class="tl-in">${rows.map(p=>`<div class="tl-l" title="${esc(p.title)}">${esc(p.alias||p.title)}</div><div class="tl-t"><span class="tl-today" style="left:${x(TODAY)}"></span><span class="pt ${p.late?"late":""}" style="left:${x(p.due)}" title="${esc(p.id)} · ${esc(p.due)}"></span></div>`).join("")}
+  <div></div><div class="tl-ax">${ticks.map(t=>`<span style="left:${x(t)}">${mm(t)}</span>`).join("")}<span style="left:${x(TODAY)};color:var(--ink);font-weight:600;top:-2px">today</span></div></div></div>`;
+}
+function pcard(p){
+  return `<button class="card ${p.late?"late":""}" data-open="proj:${esc(p.id)}" type="button">
+    <span class="hrow">${dateBox(p.due)}<span style="display:grid;gap:2px;min-width:0"><span class="mono dim">${esc(p.id)}</span><span class="t">${esc(p.title)}</span></span></span>
+    ${p.total?`<span class="pbar"><i style="width:${p.closed/p.total*100}%"></i></span><span class="mono dim">${p.closed}/${p.total} closed${p.blockedKids?` · <span style="color:var(--warn)">${p.blockedKids} blocked</span>`:""}${p.lateKids?` · <span style="color:var(--warn)">${p.lateKids} overdue</span>`:""}</span>`:`<span class="mono dim">nothing hangs from it</span>`}
+    <span class="spread"><span class="chips">${chipSt(p.status)}${p.late?`<span class="chip late">overdue</span>`:""}</span><span class="avs">${av(p.assignee,"pact")}${av(p.approver)}</span></span>
+  </button>`;
+}
+function unfiledBar(d){
+  const u=d.unfiled; if(!u.length) return "";
+  return `<button class="agrp-h warn" data-open="unfiled:1" type="button"><span class="dot warn"></span><b>${u.length} open task${u.length>1?"s are":" is"} not linked to any goal</b><span class="dim" style="font-size:12px">open to see which</span></button>`;
 }
 function projectsHTML(d){
   if(!d.projects.length) return `<div class="empty">No open goal or milestone has a due date.</div>`;
-  const late=d.projects.filter(p=>p.late);
-  return (late.length?`<div class="banner err">${late.length} past their date.</div>`:"")+`<div class="cards">${d.projects.map(g=>goalCard(g)).join("")}</div>`;
+  const groups=d.themes.filter(t=>t.projs.length);
+  return `<div class="spread"><h2>Projects</h2><span class="dim" style="font-size:12px">goals and milestones with a date · <span style="color:var(--warn)">●</span> overdue</span></div>
+    ${timeline(d.projects)}${unfiledBar(d)}
+    ${groups.map(t=>`<div class="agrp"><button class="agrp-h ${t.warn?"warn":""}" data-open="theme:${esc(t.id)}" type="button"><span class="dot ${t.warn?"warn":""}"></span><b>${esc(t.title)}</b><span class="dim" style="font-size:12px">${t.projs.length} project${t.projs.length>1?"s":""}${t.attn.length?` · ${t.attn.length} need attention`:""}</span></button><div class="cards">${t.projs.map(pcard).join("")}</div></div>`).join("")}`;
 }
 function themesHTML(d){
-  return `<div class="cards">${d.themes.map(t=>goalCard(t,`${t.openItems.length} open inside`)).join("")}</div>`+
-    (d.unfiled.length?`<div class="box"><div class="box-h"><h2>Not under any goal</h2><span class="dim">${d.unfiled.length}</span></div>${d.unfiled.slice(0,80).map(b=>rowHTML(b)).join("")}</div>`:"");
+  return `<div class="spread"><h2>Themes</h2><span class="dim" style="font-size:12px">what projects roll up to · <span style="color:var(--warn)">●</span> needs attention</span></div>
+  <div class="cards">${d.themes.map(t=>`<button class="card tint ${t.warn?"warn":""}" data-open="theme:${esc(t.id)}" type="button">
+    <span class="hrow" style="gap:8px"><span class="dot ${t.warn?"warn":""}"></span><span class="t">${esc(t.title)}</span></span>
+    <span class="mono dim">${esc(t.id)}${t.due?" · due "+dd(t.due)+" "+mm(t.due):""}</span>
+    <span class="chips"><span class="chip ok">${t.projs.length} project${t.projs.length===1?"":"s"}</span><span class="chip">${t.tasks.length} open tasks</span>${t.attn.length?`<span class="chip late">${t.attn.length} need attention</span>`:""}${t.due?"":`<span class="chip">no date</span>`}</span>
+  </button>`).join("")}${d.unfiled.length?`<button class="card tint warn" data-open="unfiled:1" type="button"><span class="hrow" style="gap:8px"><span class="dot warn"></span><span class="t">Not linked to any goal</span></span><span class="dim" style="font-size:12.5px">Open tasks with no goal above them. Link each under a goal and it moves into its project and theme.</span><span class="chips"><span class="chip late">${d.unfiled.length} tasks</span></span></button>`:""}</div>`;
 }
 function peopleHTML(d){
-  return d.people.map(p=>`<details class="box"><summary class="box-h" style="cursor:pointer"><h2>${esc(p.name)}</h2><span class="dim">${p.items.length} open${p.inprog?` · ${p.inprog} moving`:""}${p.blocked?` · ${p.blocked} blocked`:""}${p.late?` · <span class="k late">${p.late} late</span>`:""}</span></summary>${p.items.slice().sort((a,b)=>(a.due||"9").localeCompare(b.due||"9")).map(b=>rowHTML(b)).join("")}</details>`).join("");
+  if(!d.resources.length) return `<div class="empty">Nobody is named on an open pact.</div>`;
+  return `<div class="spread"><h2>Resources · people</h2><span class="dim" style="font-size:12px">everyone named as responsible or approver</span></div>
+  <div class="cards">${d.resources.map(r=>`<button class="card" data-open="person:${esc(r.name)}" type="button"><span class="hrow">${av(r.name,"pact")}<span style="display:grid"><b>${esc(r.name)}</b><span class="dim" style="font-size:12px">${r.responsible.length} responsible · ${r.accountable.length} approver · ${r.tasks.length} tasks</span></span></span>${r.stuck?`<span class="chip late" style="justify-self:start">${r.stuck} stuck</span>`:""}</button>`).join("")}</div>`;
 }
 function archiveHTML(d){
   const closes=(d.feed||[]).filter(h=>CLOSED.has(h.changes?.status?.to));
@@ -331,6 +421,62 @@ async function openDrawer(id){
     dr.appendChild(box);
   }
 }
+function showDr(html){const dr=$("#dr");dr.innerHTML=html;dr.classList.add("on");$("#scrim").classList.add("on");dr.scrollTop=0}
+const drHead=(eyebrow,title,lead="")=>`<div class="spread" style="align-items:flex-start"><span class="hrow">${lead}<span style="display:grid"><span class="mono dim">${esc(eyebrow)}</span><h2 style="font-size:17px">${esc(title)}</h2></span></span><button class="btn" data-close="1" type="button">Close</button></div>`;
+const stat=(n,l,w)=>`<div><b class="${w&&n?"w":""}">${n}</b><span>${l}</span></div>`;
+function taskList(ts){
+  if(!ts.length) return `<div class="empty">None.</div>`;
+  return `<div class="box">${ts.map(o=>rowHTML(o,`${esc(o.assignee&&o.assignee!=="unassigned"?o.assignee.split(" ")[0]:"")} ${o.due?`<span class="${o.due<TODAY?"k late":""}">${esc(fmtDay(o.due))}</span>`:""}`)).join("")}</div>`;
+}
+function goalList(gs){
+  if(!gs.length) return `<div class="empty">None.</div>`;
+  return `<div class="box">${gs.map(g=>`<div class="row" data-open="proj:${esc(g.id)}" tabindex="0" role="button">${status(g.status)}<span class="t"><span class="mono dim">${esc(g.id)}</span> ${esc(g.title)}${g.blockedKids||g.lateKids?`<br><span class="who" style="color:var(--warn)">${g.blockedKids} blocked · ${g.lateKids} overdue</span>`:""}</span><span class="s">${g.due?`<span class="${g.late?"k late":""}">${esc(fmtDay(g.due))}</span>`:"no date"} · ${g.total?g.closed+"/"+g.total:"—"}</span></div>`).join("")}</div>`;
+}
+function feedFor(ids,max=8){
+  const f=(data.feed||data.fallbackFeed).filter(e=>ids.has((e.bead_id||"").replace("BEAD-","PACT-")));
+  if(!f.length) return `<div class="empty">No changes in the last 14 days.</div>`;
+  return `<div class="box">${f.slice(0,max).map(e=>`<div class="row" data-id="${esc((e.bead_id||"").replace("BEAD-","PACT-"))}" tabindex="0" role="button"><span class="k ${esc(e.action==="note"?"note":(e.changes?.status?.to||""))}">${esc(describe(e))}</span><span class="t">${esc(e.title||"")}${e.reason?`<br><span class="who">${esc(String(e.reason).slice(0,160))}</span>`:""}</span><span class="s">${esc(short(e.changed_by))} · ${esc(fmtDay(String(e.timestamp)))}</span></div>`).join("")}</div>`;
+}
+function openProject(id){
+  const p=data.gById.get(id); if(!p) return openDrawer(id);
+  const stuck=p.open.filter(o=>o.status==="blocked"||(o.due&&o.due<TODAY));
+  showDr(`${drHead(p.id+(p.alias?" · "+p.alias:""),p.title,p.due?dateBox(p.due):"")}
+    <div class="chips">${chipSt(p.status)}${p.late?`<span class="chip late">overdue</span>`:""}<span class="chip">R: ${esc(p.assignee)}</span><span class="chip">A: ${esc(p.approver)}</span></div>
+    ${p.total?`<div style="display:grid;gap:4px"><div class="pbar" style="height:8px"><i style="width:${p.closed/p.total*100}%"></i></div><span class="mono">${p.closed}/${p.total} closed · ${p.open.length} open</span></div>`:""}
+    ${stuck.length?`<div class="dbox warn"><span class="eb">Stuck under it</span>${stuck.length} task${stuck.length>1?"s are":" is"} blocked or overdue — listed first below.</div>`:""}
+    <div class="dbox"><span class="eb">What's still open</span>${p.open.length?`<ol>${p.open.slice(0,3).map(o=>`<li>${esc(o.title)}${o.assignee&&o.assignee!=="unassigned"?` — ${esc(o.assignee)}`:""}</li>`).join("")}</ol>`:"Nothing open hangs from it. If the work is done, it can close."}</div>
+    ${p.notes&&p.notes.length?`<div class="dbox ${stuck.length||p.late?"warn":""}"><span class="eb">Latest word on it · ${esc(fmtDay(p.notes[0].date))} · ${esc(short(p.notes[0].who))}</span><div style="white-space:pre-wrap;font-size:13px;color:var(--ink-2);max-height:180px;overflow:auto">${esc(p.notes[0].text.slice(0,700))}</div></div>`:""}
+    <button class="btn" data-id="${esc(p.id)}" type="button" style="align-self:flex-start">Full detail and history →</button>
+    <h3>Open tasks · ${p.open.length}</h3>${taskList(p.open)}
+    <h3>Recent changes</h3>${feedFor(new Set([p.id,...p.open.map(o=>o.id)]))}`);
+}
+function openTheme(id){
+  const t=data.themes.find(x=>x.id===id); if(!t) return openDrawer(id);
+  const ids=new Set([t.id,...t.items.map(i=>i.id)]);
+  showDr(`${drHead(t.id+" · theme",t.title,`<span class="dot ${t.warn?"warn":""}" style="width:14px;height:14px"></span>`)}
+    <div class="trio">${stat(t.projs.length,"projects")}${stat(t.tasks.length,"open tasks")}${stat(t.attn.length,"need attention",1)}</div>
+    <button class="btn" data-id="${esc(t.id)}" type="button" style="align-self:flex-start">Open the goal itself →</button>
+    ${t.attn.length?`<h3>Needs attention</h3>${taskList(t.attn)}`:""}
+    <h3>Projects</h3>${goalList(t.projs)}
+    <h3>Recent changes</h3>${feedFor(ids,10)}`);
+}
+function openPerson(name){
+  const r=data.resources.find(x=>x.name===name); if(!r) return;
+  const first=name.split(/\s+/)[0].toLowerCase();
+  const ids=new Set([...r.tasks.map(t=>t.id),...r.responsible.map(g=>g.id)]);
+  showDr(`${drHead("Person",name,av(name,"pact"))}
+    <div class="trio">${stat(r.responsible.length,"responsible")}${stat(r.accountable.length,"approver")}${stat(r.stuck,"stuck tasks",1)}</div>
+    ${r.responsible.length?`<h3>Responsible for</h3>${goalList(r.responsible)}`:""}
+    ${r.accountable.length?`<h3>Approver of</h3>${goalList(r.accountable)}`:""}
+    <h3>Open tasks on their name · ${r.tasks.length}</h3>${taskList(r.tasks)}
+    <h3>Recent changes on their work</h3>${feedFor(ids,10)}`);
+}
+function openUnfiled(){
+  const u=data.unfiled;
+  showDr(`${drHead("Unfiled","Not linked to any goal")}
+    <div class="dbox warn"><span class="eb">Why they don't show under a project</span>A task appears in Projects and Themes through the goal it hangs from. These ${u.length} have no open goal above them. Add each one to the depends_on of the goal it serves and it moves there on the next refresh.</div>
+    ${taskList(u)}`);
+}
 function closeDrawer(){$("#dr").classList.remove("on");$("#scrim").classList.remove("on")}
 
 /* ---------- approve close ---------- */
@@ -354,8 +500,10 @@ async function approve(btn){
 /* ---------- wiring ---------- */
 $("#proj").innerHTML=Object.entries(PROJECTS).map(([k,p])=>`<button type="button" data-proj="${k}" aria-pressed="${state.project===k}">${esc(p.label)}</button>`).join("");
 document.addEventListener("click",e=>{
+  if(e.target.id==="scrim"||e.target.closest("[data-close]")) return closeDrawer();
+  const o=e.target.closest("[data-open]");
+  if(o&&data){const v=o.dataset.open,i=v.indexOf(":"),k=v.slice(0,i),id=v.slice(i+1);({proj:openProject,theme:openTheme,person:openPerson,unfiled:openUnfiled})[k]?.(id);return}
   const t=e.target.closest("[data-proj],[data-tab],[data-approve],[data-id]");
-  if(e.target.id==="scrim") return closeDrawer();
   if(!t) return;
   if(t.dataset.proj){ if(t.dataset.proj===state.project) return; state.project=t.dataset.proj; store.set("hs.project",state.project); document.querySelectorAll("[data-proj]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.proj===state.project)); data=null; if(mcp) load(false); return; }
   if(t.dataset.tab){ state.tab=t.dataset.tab; store.set("hs.tab",state.tab); render(); return; }
@@ -364,7 +512,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape") closeDrawer();
-  if((e.key==="Enter"||e.key===" ")&&e.target.matches(".row[data-id]")){e.preventDefault();openDrawer(e.target.dataset.id)}
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches(".row[data-id],.row[data-open]")){e.preventDefault();e.target.click()}
 });
 $("#refresh").onclick=()=>{ if(mcp) load(true); };
 
