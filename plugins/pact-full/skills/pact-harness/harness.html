@@ -1,0 +1,376 @@
+<title>Management Harness</title>
+<style>
+:root{
+  --bg:#f3f5f7; --surface:#fff; --surface-2:#eaeef2; --ink:#16202b; --ink-2:#4a5866; --ink-3:#7a8794; --line:#d5dce3;
+  --p:#2450c9; --p-soft:#e3eafb; --a:#18805a; --a-soft:#dcf1e7; --r:#a86a06; --r-soft:#f8ecd5;
+  --warn:#b4402a; --warn-soft:#f9e2dc; --focus:#2450c9;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --bg:#10161d; --surface:#18212a; --surface-2:#222d38; --ink:#e6ecf2; --ink-2:#aab6c2; --ink-3:#7d8a97; --line:#2c3845;
+  --p:#7c9cf2; --p-soft:#1c2946; --a:#4cc596; --a-soft:#15302a; --r:#e0a64a; --r-soft:#33291a; --warn:#f08a74; --warn-soft:#3a221e; --focus:#7c9cf2}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#10161d; --surface:#18212a; --surface-2:#222d38; --ink:#e6ecf2; --ink-2:#aab6c2; --ink-3:#7d8a97; --line:#2c3845;
+  --p:#7c9cf2; --p-soft:#1c2946; --a:#4cc596; --a-soft:#15302a; --r:#e0a64a; --r-soft:#33291a; --warn:#f08a74; --warn-soft:#3a221e; --focus:#7c9cf2}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--body);margin:0}
+.wrap{max-width:920px;margin:0 auto;padding:16px 16px 48px}
+h1{font-size:22px;margin:0;line-height:1.15}
+h2{font-size:15px;margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.mono{font-family:var(--mono);font-size:11.5px}
+.dim{color:var(--ink-3)}
+.top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.ctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:8px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:13px}
+.btn.pri{background:var(--a);color:#fff;border-color:var(--a)}
+.btn.pri.arm{background:var(--warn);border-color:var(--warn)}
+.btn:disabled{opacity:.5;cursor:default}
+.fresh{font-size:11.5px;color:var(--ink-3);margin-top:4px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:14px 0 12px;padding-bottom:2px}
+.tab{all:unset;cursor:pointer;flex:1 0 auto;min-width:88px;padding:8px 10px;border-radius:10px;background:var(--surface);border:1px solid var(--line);display:grid;gap:1px}
+.tab[aria-selected="true"]{background:var(--p-soft);border-color:var(--p)}
+.tab:focus-visible{outline:2px solid var(--focus)}
+.tab b{font-size:20px;line-height:1}
+.tab span{font-size:12px;color:var(--ink-2);font-weight:600}
+.panel{display:grid;gap:12px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.box-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;padding:7px 12px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface-2)}
+.row .t{min-width:0;overflow-wrap:anywhere}
+.row .s{font-size:12px;color:var(--ink-3);white-space:nowrap}
+.k{font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:4px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.k.done{background:var(--a-soft);color:var(--a)} .k.blocked,.k.late{background:var(--warn-soft);color:var(--warn)}
+.k.in_progress,.k.review{background:var(--p-soft);color:var(--p)} .k.note{background:var(--r-soft);color:var(--r)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.card{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px;align-content:start}
+.card:hover{border-color:var(--p)} .card:focus-visible{outline:2px solid var(--focus)}
+.card.late{border-left:4px solid var(--warn)}
+.card .t{font-weight:600;font-size:13.5px;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:12px;color:var(--ink-2)}
+.pbar{height:5px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--a)}
+.banner{padding:10px 12px;border-radius:10px;background:var(--r-soft);color:var(--ink);font-size:13px}
+.banner.err{background:var(--warn-soft)}
+.empty{padding:14px 12px;color:var(--ink-3);font-size:13px}
+.cl{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line)}
+.cl:last-child{border-bottom:0}
+.cl .t{font-size:13px;overflow-wrap:anywhere;cursor:pointer}
+.cl .ev{font-size:12px;color:var(--ink-3)}
+.day{padding:6px 12px;font-size:11.5px;font-weight:700;color:var(--ink-3);background:var(--surface-2);text-transform:uppercase;letter-spacing:.04em}
+.who{font-size:12px;color:var(--ink-3)}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none}
+.scrim.on{display:block}
+.dr{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--bg);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .18s;overflow-y:auto;padding:14px 16px 40px;display:flex;flex-direction:column;gap:10px}
+.dr.on{transform:none}
+.dr>*{flex:none}
+.dr pre{white-space:pre-wrap;font:12.5px/1.5 var(--body);margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow-wrap:anywhere}
+.skel{height:14px;border-radius:6px;background:var(--surface-2);margin:10px 12px}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1 id="title">Management Harness</h1>
+      <div class="fresh" id="fresh">Loading…</div>
+    </div>
+    <div class="ctl">
+      <div class="seg" id="proj" role="group" aria-label="Project"></div>
+      <button class="btn" id="refresh" type="button">Refresh</button>
+    </div>
+  </div>
+  <div id="note"></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="panel" id="panel"></div>
+</div>
+<div class="scrim" id="scrim"></div>
+<aside class="dr" id="dr" aria-label="Pact detail"></aside>
+
+<script>
+// Filled in by the pact-harness skill: one entry per Pact connector the user has.
+// key = project name (from whoami), server = the connector's display name.
+const PROJECTS = __PROJECTS__;
+const TABS = [["activity","Activity"],["projects","Projects"],["themes","Themes"],["people","People"],["archive","Archive"]];
+const CLOSED = new Set(["done","cancelled"]);
+const TODAY = new Date().toISOString().slice(0,10);
+
+const $ = s => document.querySelector(s);
+const store = {get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}}};
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function unent(s){return String(s??"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'")}
+function fmtDay(iso){if(!iso)return"";const d=new Date(iso.length===10?iso+"T12:00:00":iso);return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})}
+function fmtTime(iso){const d=new Date(iso);return isNaN(d)?"":d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}
+function ago(ms){const m=Math.round((Date.now()-ms)/60000);return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+" h ago"}
+function short(name){return (name||"").replace(/^beads-mcp:/,"")}
+
+let state = {project: store.get("hs.project") || Object.keys(PROJECTS)[0], tab: store.get("hs.tab") || "activity"};
+if(!PROJECTS[state.project]) state.project = Object.keys(PROJECTS)[0];
+let mcp = null, data = null, loadSeq = 0;
+
+/* ---------- parsing the connector's markdown ---------- */
+const LINE = /^- \S+ \*\*(PACT-\d+)(?: · ([^*]+?))?\*\* — (.*) \((not_started|in_progress|blocked|review|done|cancelled), R: (.*?) · A: (.*?)(?:, due (\d{4}-\d{2}-\d{2}))?\)\s*$/;
+function parseList(text){
+  const out=[];
+  for(const l of String(text||"").split("\n")){
+    const m=l.match(LINE); if(!m) continue;
+    out.push({id:m[1],alias:m[2]||"",title:unent(m[3]),status:m[4],assignee:m[5],approver:m[6],due:m[7]||null});
+  }
+  return out;
+}
+const CHILD = /^\s+- \S+ (PACT-\d+)(?: · (\S+))? — (.*) \((not_started|in_progress|blocked|review|done|cancelled)\)\s*$/;
+function parseBead(text){
+  const t=String(text||""); const children=[], parents=[]; let mode=null;
+  const type=(t.match(/^## \[(\w+)\]/m)||[])[1]||"";
+  for(const l of t.split("\n")){
+    if(/^- \*\*⬆ Blocked by/.test(l)){mode="c";continue}
+    if(/^- \*\*⬇ Blocking/.test(l)){mode="p";continue}
+    if(/^- \*\*/.test(l)||/^#/.test(l)){mode=null;continue}
+    const m=l.match(CHILD);
+    if(m&&mode){(mode==="c"?children:parents).push({id:m[1],alias:m[2]||"",title:unent(m[3]),status:m[4]})}
+  }
+  const notes=[];
+  const nm=[...t.matchAll(/^- \[(\d{4}-\d{2}-\d{2})\] ([^:\n]+): ([\s\S]*?)(?=\n- \[\d{4}-\d{2}-\d{2}\] |\n  _…|\n###|$)/gm)];
+  for(const m of nm) notes.push({date:m[1],who:m[2],text:m[3].trim()});
+  return {type:type.toLowerCase(),children,parents,notes};
+}
+
+/* ---------- connector calls ---------- */
+function errText(e, server){
+  const c=e&&e.code;
+  if(c==="server_not_connected") return `Add ${server} in claude.ai Settings → Connectors.`;
+  if(c==="needs_reauth") return `Reconnect ${server} in claude.ai Settings → Connectors.`;
+  if(c==="not_in_manifest") return `${server} isn't allowed for this page.`;
+  if(c==="selection_required") return `Pick which ${server} connector to use when claude.ai asks.`;
+  return (e&&e.message)||"The connector didn't answer.";
+}
+async function call(tool,input,fresh){
+  const r=await mcp.callTool(PROJECTS[state.project].server,tool,input,{cache:{staleTime:fresh?0:120000,gcTime:3600000,refresh:!!fresh}});
+  return r;
+}
+async function pool(items,n,fn){
+  const out=new Array(items.length); let i=0;
+  await Promise.all(Array.from({length:Math.min(n,items.length)},async()=>{while(i<items.length){const k=i++;try{out[k]=await fn(items[k])}catch(e){out[k]=null}}}));
+  return out;
+}
+
+async function load(fresh){
+  const seq=++loadSeq; const proj=state.project; const server=PROJECTS[proj].server;
+  $("#title").textContent=PROJECTS[proj].title;
+  $("#fresh").textContent="Loading from "+server+"…";
+  if(!data||data.project!==proj){ $("#panel").innerHTML='<div class="box">'+'<div class="skel"></div>'.repeat(6)+'</div>'; $("#tabs").innerHTML=""; }
+  let goalsR, openR, doneR;
+  try{
+    [goalsR, openR, doneR] = await Promise.all([
+      call("list_goals",{include_milestones:true},fresh),
+      call("list_beads",{},fresh),
+      call("list_goals",{include_milestones:true,status:"done"},fresh),
+    ]);
+  }catch(e){
+    if(seq!==loadSeq) return;
+    $("#fresh").textContent="";
+    $("#panel").innerHTML=`<div class="banner err">${esc(errText(e,server))}</div>`;
+    return;
+  }
+  if(seq!==loadSeq) return;
+  const storedAt=Math.min(...[goalsR,openR].map(r=>r.cache?.storedAt||Date.now()));
+  const goals=parseList(goalsR.payload), open=parseList(openR.payload), doneGoals=parseList(doneR.payload);
+
+  let history=null, historyErr=null;
+  try{ const h=await call("list_history",{days:14,limit:400},fresh); history=(h.payload&&h.payload.items)||[]; }
+  catch(e){ historyErr=e; }
+
+  const details=await pool(goals,5,g=>call("get_bead",{bead_id:g.id,notes_limit:3},fresh).then(r=>parseBead(r.payload)));
+  if(seq!==loadSeq) return;
+  goals.forEach((g,i)=>Object.assign(g,details[i]||{children:[],parents:[],notes:[],type:""}));
+  data=shape(proj,goals,open,doneGoals,history,historyErr,storedAt);
+  render();
+}
+
+/* ---------- shaping ---------- */
+function shape(project,goals,open,doneGoals,history,historyErr,storedAt){
+  const byId=new Map();
+  for(const b of open) byId.set(b.id,b);
+  for(const g of goals){ byId.set(g.id,{...byId.get(g.id),...g}); for(const c of g.children) if(!byId.has(c.id)) byId.set(c.id,c); for(const p of g.parents) if(!byId.has(p.id)) byId.set(p.id,p); }
+  for(const g of doneGoals) if(!byId.has(g.id)) byId.set(g.id,g);
+  const goalIds=new Set(goals.map(g=>g.id));
+  const filed=new Set(); for(const g of goals) for(const c of g.children) filed.add(c.id);
+
+  for(const g of goals){
+    g.total=g.children.length; g.closed=g.children.filter(c=>CLOSED.has(c.status)).length;
+    g.late=!!(g.due&&g.due<TODAY); g.openParents=g.parents.filter(p=>goalIds.has(p.id));
+  }
+  const projects=goals.filter(g=>g.due).sort((a,b)=>a.due.localeCompare(b.due));
+  const roots=goals.filter(g=>!g.openParents.length);
+  const subtree=g=>{const seen=new Set();const walk=x=>{for(const c of x.children){if(seen.has(c.id))continue;seen.add(c.id);const cg=goals.find(y=>y.id===c.id);if(cg)walk(cg)}};walk(g);return [...seen].map(id=>byId.get(id)).filter(Boolean)};
+  const themes=roots.map(g=>{const items=subtree(g);return{...g,items,openItems:items.filter(i=>!CLOSED.has(i.status))}}).sort((a,b)=>b.openItems.length-a.openItems.length);
+  const tasks=open.filter(b=>!goalIds.has(b.id));
+  const unfiled=tasks.filter(b=>!filed.has(b.id));
+
+  const people=new Map();
+  for(const b of open){
+    const who=b.assignee&&b.assignee!=="unassigned"&&b.assignee!=="—"?b.assignee:"Unassigned";
+    const p=people.get(who)||{name:who,items:[],late:0,blocked:0,inprog:0};
+    p.items.push(b); if(b.due&&b.due<TODAY)p.late++; if(b.status==="blocked")p.blocked++; if(b.status==="in_progress")p.inprog++;
+    people.set(who,p);
+  }
+  const closeCands=goals.filter(g=>g.total>0&&g.closed===g.total).map(g=>({...g,evidence:`All ${g.total} child pact${g.total>1?"s":""} are closed: `+g.children.map(c=>`${c.id} (${c.status})`).join(", ")+"."}));
+
+  let feed=null;
+  if(history){
+    feed=history.filter(h=>h.timestamp).map(h=>({...h,title:(byId.get((h.bead_id||"").replace("BEAD-","PACT-"))||{}).title||""}));
+  }
+  const fallbackFeed=[];
+  if(!history){ for(const g of goals) for(const n of g.notes||[]) fallbackFeed.push({bead_id:g.id,action:"note",timestamp:n.date,changed_by:n.who,reason:n.text,title:g.title,changes:{}}); fallbackFeed.sort((a,b)=>b.timestamp.localeCompare(a.timestamp)); }
+
+  return {project,goals,open,doneGoals,projects,themes,tasks,unfiled,people:[...people.values()].sort((a,b)=>b.items.length-a.items.length),closeCands,feed,fallbackFeed,historyErr,storedAt,byId};
+}
+
+/* ---------- rendering ---------- */
+function status(s){return `<span class="k ${esc(s)}">${esc((s||"").replace("_"," "))}</span>`}
+function rowHTML(b,extra){
+  const late=b.due&&b.due<TODAY&&!CLOSED.has(b.status);
+  return `<div class="row" data-id="${esc(b.id)}" tabindex="0" role="button">${status(b.status)}<span class="t"><span class="mono dim">${esc(b.id)}</span> ${esc(b.title)}</span><span class="s">${extra??(b.due?`<span class="${late?"k late":""}">${esc(fmtDay(b.due))}</span>`:"")}</span></div>`;
+}
+function renderTabs(){
+  const d=data; const n={activity:(d.feed||d.fallbackFeed).length,projects:d.projects.length,themes:d.themes.length,people:d.people.length,archive:d.doneGoals.length};
+  $("#tabs").innerHTML=TABS.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${state.tab===k}" data-tab="${k}"><b>${n[k]}</b><span>${l}</span></button>`).join("");
+}
+function render(){
+  const d=data; if(!d) return;
+  $("#fresh").textContent=`${d.open.length} open pacts · data from ${ago(d.storedAt)}`;
+  $("#note").innerHTML="";
+  renderTabs();
+  const P=$("#panel");
+  if(state.tab==="activity") P.innerHTML=activityHTML(d);
+  if(state.tab==="projects") P.innerHTML=projectsHTML(d);
+  if(state.tab==="themes") P.innerHTML=themesHTML(d);
+  if(state.tab==="people") P.innerHTML=peopleHTML(d);
+  if(state.tab==="archive") P.innerHTML=archiveHTML(d);
+}
+function describe(h){
+  const c=h.changes||{};
+  if(h.action==="created") return "created";
+  if(h.action==="note") return "note";
+  if(h.action==="deleted") return "deleted";
+  if(c.status) return `${(c.status.from||"").replace("_"," ")} → ${(c.status.to||"").replace("_"," ")}`;
+  const keys=Object.keys(c); return keys.length?"changed "+keys.join(", "):h.action||"change";
+}
+function activityHTML(d){
+  let h="";
+  h+=`<div class="box"><div class="box-h"><h2>Ready to close</h2><span class="dim">${d.closeCands.length}</span></div>`;
+  h+= d.closeCands.length? d.closeCands.map(g=>`<div class="cl"><div><div class="t" data-id="${esc(g.id)}"><span class="mono dim">${esc(g.id)}</span> ${esc(g.title)}</div><div class="ev">${esc(g.evidence)}</div></div><button class="btn pri" data-approve="${esc(g.id)}" type="button">Approve</button></div>`).join("")
+    : `<div class="empty">No open goal has all of its children closed.</div>`;
+  h+=`</div>`;
+  if(d.unfiled.length) h+=`<div class="banner">${d.unfiled.length} open task${d.unfiled.length>1?"s":""} aren't under any goal — <button class="btn" data-tab="people" type="button">see them by person</button></div>`;
+  const feed=d.feed||d.fallbackFeed;
+  if(!d.feed) h+=`<div class="banner">Showing goal notes only. The full history (status moves, creations, every note) needs the <b>list_history</b> tool — reconnect ${esc(PROJECTS[d.project].server)} once it's deployed.</div>`;
+  h+=`<div class="box"><div class="box-h"><h2>Last 14 days</h2><span class="dim">${feed.length} changes</span></div>`;
+  if(!feed.length) h+=`<div class="empty">Nothing changed in the window.</div>`;
+  let day="";
+  for(const e of feed.slice(0,250)){
+    const dd=String(e.timestamp).slice(0,10);
+    if(dd!==day){day=dd;h+=`<div class="day">${esc(fmtDay(dd))}</div>`}
+    const what=describe(e); const cls=e.action==="note"?"note":(e.changes?.status?.to||"");
+    const txt=e.action==="note"||e.reason?String(e.reason).slice(0,180):"";
+    h+=`<div class="row" data-id="${esc((e.bead_id||"").replace("BEAD-","PACT-"))}" tabindex="0" role="button"><span class="k ${esc(cls)}">${esc(what)}</span><span class="t"><span class="mono dim">${esc((e.bead_id||"").replace("BEAD-","PACT-"))}</span> ${esc(e.title||"")}${txt?`<br><span class="who">${esc(txt)}${String(e.reason).length>180?"…":""}</span>`:""}</span><span class="s">${esc(short(e.changed_by))}${String(e.timestamp).length>10?" · "+esc(fmtTime(e.timestamp)):""}</span></div>`;
+  }
+  return h+`</div>`;
+}
+function goalCard(g,sub){
+  const pct=g.total?Math.round(100*g.closed/g.total):0;
+  return `<button class="card ${g.late?"late":""}" data-id="${esc(g.id)}" type="button"><span class="t">${esc(g.title)}</span>
+    <span class="meta"><span class="mono">${esc(g.id)}</span>${status(g.status)}${g.due?`<span class="${g.late?"k late":""}">due ${esc(fmtDay(g.due))}</span>`:""}</span>
+    <span class="pbar"><i style="width:${pct}%"></i></span>
+    <span class="meta"><span>${g.closed}/${g.total} done</span><span>${esc(g.assignee)}</span>${sub?`<span>${esc(sub)}</span>`:""}</span></button>`;
+}
+function projectsHTML(d){
+  if(!d.projects.length) return `<div class="empty">No open goal or milestone has a due date.</div>`;
+  const late=d.projects.filter(p=>p.late);
+  return (late.length?`<div class="banner err">${late.length} past their date.</div>`:"")+`<div class="cards">${d.projects.map(g=>goalCard(g)).join("")}</div>`;
+}
+function themesHTML(d){
+  return `<div class="cards">${d.themes.map(t=>goalCard(t,`${t.openItems.length} open inside`)).join("")}</div>`+
+    (d.unfiled.length?`<div class="box"><div class="box-h"><h2>Not under any goal</h2><span class="dim">${d.unfiled.length}</span></div>${d.unfiled.slice(0,80).map(b=>rowHTML(b)).join("")}</div>`:"");
+}
+function peopleHTML(d){
+  return d.people.map(p=>`<details class="box"><summary class="box-h" style="cursor:pointer"><h2>${esc(p.name)}</h2><span class="dim">${p.items.length} open${p.inprog?` · ${p.inprog} moving`:""}${p.blocked?` · ${p.blocked} blocked`:""}${p.late?` · <span class="k late">${p.late} late</span>`:""}</span></summary>${p.items.slice().sort((a,b)=>(a.due||"9").localeCompare(b.due||"9")).map(b=>rowHTML(b)).join("")}</details>`).join("");
+}
+function archiveHTML(d){
+  const closes=(d.feed||[]).filter(h=>CLOSED.has(h.changes?.status?.to));
+  let h="";
+  if(closes.length) h+=`<div class="box"><div class="box-h"><h2>Closed in the last 14 days</h2><span class="dim">${closes.length}</span></div>${closes.map(e=>rowHTML({id:(e.bead_id||"").replace("BEAD-","PACT-"),title:e.title,status:e.changes.status.to},`${esc(fmtDay(e.timestamp))}`)).join("")}</div>`;
+  h+=`<div class="box"><div class="box-h"><h2>Finished goals</h2><span class="dim">${d.doneGoals.length}</span></div>${d.doneGoals.map(g=>rowHTML(g)).join("")||'<div class="empty">None yet.</div>'}</div>`;
+  return h;
+}
+
+/* ---------- drawer ---------- */
+async function openDrawer(id){
+  const dr=$("#dr"); const b=data.byId.get(id)||{id,title:""};
+  dr.innerHTML=`<div class="top"><div><div class="mono dim">${esc(id)}${b.alias?" · "+esc(b.alias):""}</div><h2 style="font-size:17px">${esc(b.title)}</h2></div><div class="ctl"><button class="btn" id="copy" type="button">Copy for Claude</button><button class="btn" id="close" type="button">Close</button></div></div><div class="box"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>`;
+  dr.classList.add("on"); $("#scrim").classList.add("on");
+  $("#close").onclick=closeDrawer;
+  $("#copy").onclick=async()=>{const s=`${id}${b.alias?" · "+b.alias:""} — ${b.title}`;try{await navigator.clipboard.writeText(s);$("#copy").textContent="Copied"}catch{$("#copy").textContent=s}};
+  const server=PROJECTS[state.project].server;
+  let detail="", hist=null;
+  try{ detail=String((await call("get_bead",{bead_id:id,notes_limit:10})).payload||""); }
+  catch(e){ detail=errText(e,server); }
+  try{ const h=await call("list_history",{bead_id:id,days:90,limit:60}); hist=h.payload?.items||[]; }catch{}
+  if(!dr.classList.contains("on")) return;
+  dr.querySelector(".box").remove();
+  const pre=document.createElement("pre"); pre.textContent=unent(detail.replace(/\*\*/g,"")); dr.appendChild(pre);
+  if(hist&&hist.length){
+    const box=document.createElement("div"); box.className="box";
+    box.innerHTML=`<div class="box-h"><h2>History · 90 days</h2><span class="dim">${hist.length}</span></div>`+hist.map(e=>`<div class="row" style="cursor:default"><span class="k ${esc(e.action==="note"?"note":(e.changes?.status?.to||""))}">${esc(describe(e))}</span><span class="t">${esc(String(e.reason||"").slice(0,240))}</span><span class="s">${esc(short(e.changed_by))} · ${esc(fmtDay(String(e.timestamp)))}</span></div>`).join("");
+    dr.appendChild(box);
+  }
+}
+function closeDrawer(){$("#dr").classList.remove("on");$("#scrim").classList.remove("on")}
+
+/* ---------- approve close ---------- */
+async function approve(btn){
+  const id=btn.dataset.approve;
+  if(!btn.classList.contains("arm")){btn.classList.add("arm");btn.textContent="Confirm close";setTimeout(()=>{if(btn.isConnected&&!btn.disabled){btn.classList.remove("arm");btn.textContent="Approve"}},5000);return}
+  btn.disabled=true; btn.textContent="Closing…";
+  const g=data.closeCands.find(x=>x.id===id); const server=PROJECTS[state.project].server;
+  try{
+    await mcp.callTool(server,"add_note",{bead_id:id,text:`Close approved from the harness artifact. Evidence: ${g.evidence}`});
+    await mcp.callTool(server,"update_status",{bead_id:id,status:"done",reason:`Closed from the harness: ${g.evidence}`});
+    btn.textContent="Closed ✓";
+    await mcp.invalidate(server).catch(()=>{});
+    load(true);
+  }catch(e){
+    btn.disabled=false; btn.classList.remove("arm"); btn.textContent="Approve";
+    $("#note").innerHTML=`<div class="banner err">Couldn't close ${esc(id)}: ${esc(errText(e,server))}</div>`;
+  }
+}
+
+/* ---------- wiring ---------- */
+$("#proj").innerHTML=Object.entries(PROJECTS).map(([k,p])=>`<button type="button" data-proj="${k}" aria-pressed="${state.project===k}">${esc(p.label)}</button>`).join("");
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-proj],[data-tab],[data-approve],[data-id]");
+  if(e.target.id==="scrim") return closeDrawer();
+  if(!t) return;
+  if(t.dataset.proj){ if(t.dataset.proj===state.project) return; state.project=t.dataset.proj; store.set("hs.project",state.project); document.querySelectorAll("[data-proj]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.proj===state.project)); data=null; if(mcp) load(false); return; }
+  if(t.dataset.tab){ state.tab=t.dataset.tab; store.set("hs.tab",state.tab); render(); return; }
+  if(t.dataset.approve){ approve(t); return; }
+  if(t.dataset.id){ openDrawer(t.dataset.id); }
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape") closeDrawer();
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches(".row[data-id]")){e.preventDefault();openDrawer(e.target.dataset.id)}
+});
+$("#refresh").onclick=()=>{ if(mcp) load(true); };
+
+(async()=>{
+  mcp = window.claude ? await window.claude.use("mcp") : null;
+  if(!mcp){ $("#fresh").textContent=""; $("#panel").innerHTML='<div class="banner err">Open this page in claude.ai with your Pact connectors to see live data.</div>'; return; }
+  load(false);
+})();
+</script>
