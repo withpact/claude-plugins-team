@@ -40,12 +40,13 @@ button{font:inherit;color:inherit}
 .panel{display:grid;gap:12px}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:10px}
 .box-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
-.row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;padding:7px 12px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+.row{display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:7px 12px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
 .row:last-child{border-bottom:0}
 .row:hover{background:var(--surface-2)}
 .row .t{min-width:0;overflow-wrap:anywhere}
 .row .s{font-size:12px;color:var(--ink-3);white-space:nowrap}
-.k{font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:4px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.k{font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:4px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap;display:inline-block;max-width:180px;overflow:hidden;text-overflow:ellipsis;vertical-align:baseline}
+.who{overflow-wrap:anywhere}
 .k.done{background:var(--a-soft);color:var(--a)} .k.blocked,.k.late{background:var(--warn-soft);color:var(--warn)}
 .k.in_progress,.k.review{background:var(--p-soft);color:var(--p)} .k.note{background:var(--r-soft);color:var(--r)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
@@ -319,7 +320,8 @@ function describe(h){
   if(h.action==="created") return "created";
   if(h.action==="note") return "note";
   if(h.action==="deleted") return "deleted";
-  if(c.status) return `${(c.status.from||"").replace("_"," ")} → ${(c.status.to||"").replace("_"," ")}`;
+  const st=v=>{v=String(v||"").replace(/_/g," ");return v.length>14?"…":v};
+  if(c.status) return `${st(c.status.from)} → ${st(c.status.to)}`;
   const keys=Object.keys(c); return keys.length?"changed "+keys.join(", "):h.action||"change";
 }
 function activityHTML(d){
