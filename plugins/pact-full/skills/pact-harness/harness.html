@@ -111,6 +111,15 @@ button{font:inherit;color:inherit}
 .dbox.warn{background:var(--warn-soft);border-color:transparent} .dbox.warn .eb{color:var(--warn)}
 .dbox ol{margin:0;padding-left:18px;display:grid;gap:2px}
 .dr h3{font-size:13px;color:var(--ink-3);margin:6px 0 0}
+.md{font-size:13.5px;line-height:1.5;overflow-wrap:anywhere}
+.md p{margin:0 0 8px} .md p:last-child{margin-bottom:0}
+.md h4{font-size:13.5px;margin:10px 0 4px} .md h4:first-child{margin-top:0}
+.md ul,.md ol{margin:0 0 8px;padding-left:20px;display:grid;gap:2px}
+.md code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:0 4px;border-radius:4px}
+.md a{color:var(--p)}
+.nt{padding:10px 12px;border-bottom:1px solid var(--line);display:grid;gap:4px}
+.nt:last-child{border-bottom:0}
+.row>.k{align-self:start}
 .skel{height:14px;border-radius:6px;background:var(--surface-2);margin:10px 12px}
 </style>
 
@@ -164,6 +173,11 @@ function parseList(text){
   return out;
 }
 const CHILD = /^\s+- \S+ (PACT-\d+)(?: · (\S+))? — (.*) \((not_started|in_progress|blocked|review|done|cancelled)\)\s*$/;
+function splitNotes(body){
+  return String(body||"").replace(/\n\s*_…[^\n]*_\s*$/,"").split(/\n(?=- \[\d{4}-\d{2}-\d{2}\] )/)
+    .map(c=>c.match(/^\s*- \[(\d{4}-\d{2}-\d{2})\] (\S+): ([\s\S]*)$/)).filter(Boolean)
+    .map(m=>({date:m[1],who:m[2],text:m[3].trim()}));
+}
 function parseBead(text){
   const t=String(text||""); const children=[], parents=[]; let mode=null;
   const type=(t.match(/^## \[(\w+)\]/m)||[])[1]||"";
@@ -174,9 +188,7 @@ function parseBead(text){
     const m=l.match(CHILD);
     if(m&&mode){(mode==="c"?children:parents).push({id:m[1],alias:m[2]||"",title:unent(m[3]),status:m[4]})}
   }
-  const notes=[];
-  const nm=[...t.matchAll(/^- \[(\d{4}-\d{2}-\d{2})\] ([^:\n]+): ([\s\S]*?)(?=\n- \[\d{4}-\d{2}-\d{2}\] |\n  _…|\n###|$)/gm)];
-  for(const m of nm) notes.push({date:m[1],who:m[2],text:m[3].trim()});
+  const notes=splitNotes((t.split(/^### Notes.*$/m)[1]||"").split(/^###\s/m)[0]);
   return {type:type.toLowerCase(),children,parents,notes};
 }
 
@@ -403,6 +415,75 @@ function archiveHTML(d){
 }
 
 /* ---------- drawer ---------- */
+/* ---------- get_bead markdown → structured detail ---------- */
+function inlineMd(t){
+  let h=esc(unent(t));
+  h=h.replace(/`([^`]+)`/g,'<code>$1</code>');
+  h=h.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+  h=h.replace(/(^|[\s(])_([^_]+)_(?=[\s).,]|$)/g,'$1<i>$2</i>');
+  h=h.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  h=h.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  return h;
+}
+function blockMd(text){
+  const out=[]; let list=null, para=[];
+  const flushP=()=>{if(para.length){out.push(`<p>${para.map(inlineMd).join("<br>")}</p>`);para=[]}};
+  const flushL=()=>{if(list){out.push(`<${list.tag}>${list.items.map(i=>`<li>${inlineMd(i)}</li>`).join("")}</${list.tag}>`);list=null}};
+  for(const raw of String(text).split("\n")){
+    const l=raw.trimEnd(); let m;
+    if(!l.trim()){flushP();flushL();continue}
+    if((m=l.match(/^#{1,6}\s+(.*)/))){flushP();flushL();out.push(`<h4>${inlineMd(m[1])}</h4>`);continue}
+    if((m=l.match(/^\s*[-*•]\s+(.*)/))){flushP();if(!list||list.tag!=="ul"){flushL();list={tag:"ul",items:[]}}list.items.push(m[1]);continue}
+    if((m=l.match(/^\s*\d+[.)]\s+(.*)/))){flushP();if(!list||list.tag!=="ol"){flushL();list={tag:"ol",items:[]}}list.items.push(m[1]);continue}
+    if(list&&/^\s{2,}\S/.test(raw)){list.items[list.items.length-1]+=" "+l.trim();continue}
+    flushL();para.push(l);
+  }
+  flushP();flushL();
+  return out.join("");
+}
+function beadHTML(text){
+  const t=String(text||"");
+  if(!/^## \[/m.test(t)) return `<div class="dbox">${blockMd(t)}</div>`;
+  const lines=t.split("\n");
+  const fields=[], parts={c:[],p:[]}; let mode=null, i=1;
+  for(;i<lines.length;i++){
+    const l=lines[i];
+    if(/^###\s/.test(l)) break;
+    let m;
+    if(/^- \*\*⬆ Blocked by/.test(l)){mode="c";continue}
+    if(/^- \*\*⬇ Blocking/.test(l)){mode="p";continue}
+    if((m=l.match(CHILD))&&mode){parts[mode].push({id:m[1],alias:m[2]||"",title:unent(m[3]),status:m[4]});continue}
+    if((m=l.match(/^- \*\*(.+?)\*\*:\s*(.*)$/))){mode=null;fields.push([m[1],m[2]]);continue}
+  }
+  const sections=[]; let cur=null;
+  for(;i<lines.length;i++){
+    const m=lines[i].match(/^###\s+(.*)/);
+    if(m){cur={title:m[1],body:[]};sections.push(cur);continue}
+    if(cur) cur.body.push(lines[i]);
+  }
+  const f=Object.fromEntries(fields.map(([k,v])=>[k.toLowerCase(),v]));
+  const stat=(f.status||"").replace(/^\S+\s+/,"");
+  const chips=[stat?chipSt(stat):"",f.priority?`<span class="chip">${esc(f.priority)} priority</span>`:"",f.assignee?`<span class="chip">R: ${esc(f.assignee)}</span>`:"",f.approver?`<span class="chip">A: ${esc(f.approver)}</span>`:"",f.due?`<span class="chip ${f.due<TODAY&&!CLOSED.has(stat)?"late":""}">due ${esc(fmtDay(f.due))}</span>`:""].join("");
+  const known=new Set(["status","priority","assignee","approver","due"]);
+  const extra=fields.filter(([k])=>!known.has(k.toLowerCase()));
+  const kids=parts.c, done=kids.filter(k=>CLOSED.has(k.status)).length;
+  const linkRows=xs=>`<div class="box">${xs.map(x=>rowHTML(x,"")).join("")}</div>`;
+  let h=`<div class="chips">${chips}</div>`;
+  if(extra.length) h+=`<div class="meta">${extra.map(([k,v])=>`<span><span class="dim">${esc(k)}:</span> ${inlineMd(v)}</span>`).join("")}</div>`;
+  if(kids.length) h+=`<h3>Depends on · ${done}/${kids.length} closed</h3><div class="pbar"><i style="width:${done/kids.length*100}%"></i></div>${linkRows(kids.slice().sort((a,b)=>CLOSED.has(a.status)-CLOSED.has(b.status)))}`;
+  if(parts.p.length) h+=`<h3>Part of</h3>${linkRows(parts.p)}`;
+  for(const sec of sections){
+    const body=sec.body.join("\n").trim();
+    if(/^notes/i.test(sec.title)){
+      const notes=splitNotes(body).map(n=>[null,n.date,n.who,n.text]);
+      const more=(body.match(/_…\s*and (\d+) older/)||[])[1];
+      h+=`<h3>${esc(sec.title)}</h3><div class="box">${notes.map(n=>`<div class="nt"><div class="spread"><span class="who">${esc(short(n[2]))}</span><span class="who">${esc(fmtDay(n[1]))}</span></div><div class="md">${blockMd(n[3].trim())}</div></div>`).join("")||'<div class="empty">No notes.</div>'}${more?`<div class="empty">${esc(more)} older note${more==="1"?"":"s"} not shown.</div>`:""}</div>`;
+    } else if(body){
+      h+=`<h3>${esc(sec.title.replace(/^Description \/ /,""))}</h3><div class="dbox md">${blockMd(body)}</div>`;
+    }
+  }
+  return h;
+}
 async function openDrawer(id){
   const dr=$("#dr"); const b=data.byId.get(id)||{id,title:""};
   dr.innerHTML=`<div class="top"><div><div class="mono dim">${esc(id)}${b.alias?" · "+esc(b.alias):""}</div><h2 style="font-size:17px">${esc(b.title)}</h2></div><div class="ctl"><button class="btn" id="copy" type="button">Copy for Claude</button><button class="btn" id="close" type="button">Close</button></div></div><div class="box"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>`;
@@ -416,7 +497,7 @@ async function openDrawer(id){
   try{ const h=await call("list_history",{bead_id:id,days:90,limit:60}); hist=h.payload?.items||[]; }catch{}
   if(!dr.classList.contains("on")) return;
   dr.querySelector(".box").remove();
-  const pre=document.createElement("pre"); pre.textContent=unent(detail.replace(/\*\*/g,"")); dr.appendChild(pre);
+  const body=document.createElement("div"); body.style.cssText="display:grid;gap:10px"; body.innerHTML=beadHTML(detail); dr.appendChild(body);
   if(hist&&hist.length){
     const box=document.createElement("div"); box.className="box";
     box.innerHTML=`<div class="box-h"><h2>History · 90 days</h2><span class="dim">${hist.length}</span></div>`+hist.map(e=>`<div class="row" style="cursor:default"><span class="k ${esc(e.action==="note"?"note":(e.changes?.status?.to||""))}">${esc(describe(e))}</span><span class="t">${esc(String(e.reason||"").slice(0,240))}</span><span class="s">${esc(short(e.changed_by))} · ${esc(fmtDay(String(e.timestamp)))}</span></div>`).join("");
@@ -442,14 +523,14 @@ function feedFor(ids,max=8){
 function openProject(id){
   const p=data.gById.get(id); if(!p) return openDrawer(id);
   const stuck=p.open.filter(o=>o.status==="blocked"||(o.due&&o.due<TODAY));
+  const done=p.children.filter(c=>CLOSED.has(c.status)).map(c=>({...(data.byId.get(c.id)||{}),...c}));
   showDr(`${drHead(p.id+(p.alias?" · "+p.alias:""),p.title,p.due?dateBox(p.due):"")}
     <div class="chips">${chipSt(p.status)}${p.late?`<span class="chip late">overdue</span>`:""}<span class="chip">R: ${esc(p.assignee)}</span><span class="chip">A: ${esc(p.approver)}</span></div>
     ${p.total?`<div style="display:grid;gap:4px"><div class="pbar" style="height:8px"><i style="width:${p.closed/p.total*100}%"></i></div><span class="mono">${p.closed}/${p.total} closed · ${p.open.length} open</span></div>`:""}
-    ${stuck.length?`<div class="dbox warn"><span class="eb">Stuck under it</span>${stuck.length} task${stuck.length>1?"s are":" is"} blocked or overdue — listed first below.</div>`:""}
-    <div class="dbox"><span class="eb">What's still open</span>${p.open.length?`<ol>${p.open.slice(0,3).map(o=>`<li>${esc(o.title)}${o.assignee&&o.assignee!=="unassigned"?` — ${esc(o.assignee)}`:""}</li>`).join("")}</ol>`:"Nothing open hangs from it. If the work is done, it can close."}</div>
     ${p.notes&&p.notes.length?`<div class="dbox ${stuck.length||p.late?"warn":""}"><span class="eb">Latest word on it · ${esc(fmtDay(p.notes[0].date))} · ${esc(short(p.notes[0].who))}</span><div style="white-space:pre-wrap;font-size:13px;color:var(--ink-2);max-height:180px;overflow:auto">${esc(p.notes[0].text.slice(0,700))}</div></div>`:""}
     <button class="btn" data-id="${esc(p.id)}" type="button" style="align-self:flex-start">Full detail and history →</button>
-    <h3>Open tasks · ${p.open.length}</h3>${taskList(p.open)}
+    <h3>Open tasks · ${p.open.length}${stuck.length?` · <span style="color:var(--warn)">${stuck.length} blocked or overdue</span>`:""}</h3>${p.open.length?taskList(p.open):`<div class="empty">Nothing open hangs from it. If the work is done, it can close.</div>`}
+    ${done.length?`<details class="box"><summary class="box-h" style="cursor:pointer"><h2>Done · ${done.length}</h2><span class="dim">show</span></summary>${done.map(o=>rowHTML(o,"")).join("")}</details>`:""}
     <h3>Recent changes</h3>${feedFor(new Set([p.id,...p.open.map(o=>o.id)]))}`);
 }
 function openTheme(id){

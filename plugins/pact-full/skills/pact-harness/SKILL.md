@@ -9,7 +9,7 @@ description: >-
   runs /harness. It publishes one artifact; it never writes to a pact by itself.
 ---
 
-# Pact Harness v0.2.1
+# Pact Harness v0.2.3
 
 The harness is a page in `harness.html`, next to this file. It calls the
 viewer's own Pact connectors from inside the page, using the artifact's `mcp`
