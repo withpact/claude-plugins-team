@@ -203,6 +203,8 @@ button.chip.src:hover{background:var(--p-soft);color:var(--p)}
 .item .rside{display:grid;justify-items:end;gap:1px;text-align:right}
 .item .rside small{font-size:11.5px;color:var(--ink-3)} .item .rside b{font-size:13px;font-weight:600;color:var(--head)}
 .box>.item:last-child{margin-bottom:12px}
+/* companies */
+.av.org{border-radius:8px;background:var(--surface-2);color:var(--ink)}
 /* channels */
 .ch{display:inline-block;margin-left:6px;padding:0 7px;border-radius:999px;font:600 10.5px/1.6 var(--body);background:var(--surface-2);color:var(--ink-2);vertical-align:1px}
 .ch-whatsapp{background:#e2f7e9;color:#128c4a} .ch-slack{background:#f3e8f7;color:#7a2f8f} .ch-teams{background:#e8eafb;color:#4b53bc}
@@ -250,7 +252,7 @@ button.chip.src:hover{background:var(--p-soft);color:var(--p)}
 <script>
 // The template's version. The page compares it with what the Pact server serves
 // (`harness_template`) and offers a one-click self-update when the server's is newer.
-const HARNESS_VERSION = "2026.10.02.2";
+const HARNESS_VERSION = "2026.10.02.3";
 // Filled in when the page is built (by /harness, or by the page's own update):
 // one entry per Pact connector; key = project name (from whoami), server = the
 // connector's display name.
@@ -279,7 +281,12 @@ const LINE = /^- \S+ \*\*(PACT-\d+)(?: · ([^*]+?))?\*\* — (.*) \((not_started
 function parseList(text){
   const out=[];
   for(const l of String(text||"").split("\n")){
-    const m=l.match(LINE); if(!m) continue;
+    const m=l.match(LINE);
+    if(!m){ // "  org: BBC, News24 · event: IBC 2026" under a pact: its namespaced tags
+      const last=out[out.length-1]; const em=l.match(/^\s{2,}((?:org|event): .+)$/);
+      if(last&&em) for(const part of em[1].split(" · ")){ const [k,v]=part.split(/:\s*/); (last[k]=last[k]||[]).push(...v.split(",").map(x=>x.trim()).filter(Boolean)); }
+      continue;
+    }
     out.push({id:m[1],alias:m[2]||"",title:unent(m[3]),status:m[4],assignee:m[5],approver:m[6],due:m[7]||null});
   }
   return out;
@@ -679,9 +686,12 @@ function shape(project,goals,open,doneGoals,history,historyErr,storedAt){
   const resources=[...res.values()].sort((a,b)=>(b.responsible.length+b.tasks.length)-(a.responsible.length+a.tasks.length));
   for(const r of resources) r.tasks.sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
 
+  const orgMap=new Map();   // company → its open pacts, from `org:` tags
+  for(const b of open) for(const o of (b.org||[])){ if(!orgMap.has(o)) orgMap.set(o,{name:o,items:[],people:new Set(),late:0,events:new Set()}); const r=orgMap.get(o); r.items.push(b); if(b.assignee&&b.assignee!=="unassigned") r.people.add(b.assignee); if(b.due&&b.due<TODAY) r.late++; for(const e of (b.event||[])) r.events.add(e); }
+  const orgs=[...orgMap.values()].sort((a,b)=>b.items.length-a.items.length||a.name.localeCompare(b.name));
   const chan=new Map();   // bead id → Set of channels seen in the window
   for(const e of (feed||[])){ const c=channelOf(e); if(!c) continue; e.channel=c; const id=(e.bead_id||"").replace("BEAD-","PACT-"); if(!chan.has(id)) chan.set(id,new Set()); chan.get(id).add(c); }
-  return {project,goals,gById,open,doneGoals,projects,themes,tasks,unfiled,resources,people:[...people.values()].sort((a,b)=>b.items.length-a.items.length),closeCands,feed,fallbackFeed,historyErr,storedAt,byId,chan};
+  return {project,goals,gById,open,doneGoals,projects,themes,tasks,unfiled,resources,people:[...people.values()].sort((a,b)=>b.items.length-a.items.length),closeCands,feed,fallbackFeed,historyErr,storedAt,byId,chan,orgs};
 }
 
 /* ---------- rendering ---------- */
@@ -698,7 +708,7 @@ function rowHTML(b,extra,why){
   return `<div class="item" data-id="${esc(b.id)}" tabindex="0" role="button"><div><div class="rid">${esc(b.id)}${chip}</div><div class="rt">${esc(b.title)}</div>${sub?`<div class="rsub"><span class="sd ${esc(subCls)}"></span>${esc(sub)}</div>`:""}</div><div class="rside">${side||""}</div></div>`;
 }
 function renderTabs(){
-  const d=data; const n={myday:(d.myday?d.myday.count:0),activity:(d.feed||d.fallbackFeed).length,projects:d.projects.length,themes:d.themes.length,people:d.resources.length,archive:d.doneGoals.length};
+  const d=data; const n={myday:(d.myday?d.myday.count:0),activity:(d.feed||d.fallbackFeed).length,projects:d.projects.length,themes:d.themes.length,people:d.resources.length+d.orgs.length,archive:d.doneGoals.length};
   $("#tabs").innerHTML=TABS.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${state.tab===k}" data-tab="${k}"><span>${l}</span><b>${n[k]}</b></button>`).join("");
 }
 function render(){
@@ -811,9 +821,26 @@ function themesHTML(d){
   </button>`).join("")}${d.unfiled.length?`<button class="card tint warn" data-open="unfiled:1" type="button"><span class="hrow" style="gap:8px"><span class="dot warn"></span><span class="t">Not linked to any goal</span></span><span class="dim" style="font-size:12.5px">Open tasks with no goal above them. Link each under a goal and it moves into its project and theme.</span><span class="chips"><span class="chip late">${d.unfiled.length} tasks</span></span></button>`:""}</div>`;
 }
 function peopleHTML(d){
-  if(!d.resources.length) return `<div class="empty">Nobody is named on an open pact.</div>`;
-  return `<div class="spread"><h2>Resources · people</h2><span class="dim" style="font-size:12px">everyone named as responsible or approver</span></div>
+  const seg=`<div class="seg" role="group" aria-label="Resources">${[["people","People",d.resources.length],["orgs","Companies",d.orgs.length]].map(([k,l,n])=>`<button type="button" data-rk="${k}" aria-pressed="${RK===k}">${l} ${n}</button>`).join("")}</div>`;
+  if(RK==="orgs"){
+    const body=d.orgs.length?`<div class="cards">${d.orgs.map(o=>`<button class="card" data-open="org:${esc(o.name)}" type="button"><span class="hrow"><span class="av org">${esc(initials(o.name))}</span><span style="display:grid"><b>${esc(o.name)}</b><span class="dim" style="font-size:12px">${o.items.length} open pact${o.items.length===1?"":"s"} · ${o.people.size} ${o.people.size===1?"person":"people"}</span></span></span>${o.late||o.events.size?`<span class="chips">${o.late?`<span class="chip late">${o.late} late</span>`:""}${[...o.events].map(e=>`<span class="chip">${esc(e)}</span>`).join("")}</span>`:""}</button>`).join("")}</div>`
+      :`<div class="empty">No pact is tagged with a company yet. Tag pacts with <b>org:Company</b> (and <b>event:Name</b>) and they group here — ask Claude to "tag this board's pacts by company".</div>`;
+    return `<div class="spread"><h2>Resources</h2>${seg}</div>${body}`;
+  }
+  if(!d.resources.length) return `<div class="spread"><h2>Resources</h2>${seg}</div><div class="empty">Nobody is named on an open pact.</div>`;
+  return `<div class="spread"><h2>Resources</h2>${seg}</div>
   <div class="cards">${d.resources.map(r=>`<button class="card" data-open="person:${esc(r.name)}" type="button"><span class="hrow">${av(r.name,"pact")}<span style="display:grid"><b>${esc(r.name)}</b><span class="dim" style="font-size:12px">${r.responsible.length} responsible · ${r.accountable.length} approver · ${r.tasks.length} tasks</span></span></span>${r.stuck?`<span class="chip late" style="justify-self:start">${r.stuck} stuck</span>`:""}</button>`).join("")}</div>`;
+}
+let RK=store.get("hs.rk")||"people";
+function openOrg(name){
+  const o=data.orgs.find(x=>x.name===name); if(!o) return;
+  const items=o.items.slice().sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
+  const ids=new Set(items.map(b=>b.id));
+  showDr(`${drHead("Company",o.name,`<span class="av org" style="width:40px;height:40px;font-size:14px">${esc(initials(o.name))}</span>`)}
+    <div class="trio">${stat(items.length,"open pacts")}${stat(o.people.size,"people on it")}${stat(o.late,"late",1)}</div>
+    ${o.people.size?`<div class="chips">${[...o.people].map(p=>`<span class="chip">${esc(p)}</span>`).join("")}</div>`:""}
+    <h3>Open pacts</h3><div class="box" style="padding-top:10px">${items.map(b=>rowHTML(b)).join("")}</div>
+    <h3>Recent changes</h3>${feedFor(ids,10)}`);
 }
 function archiveHTML(d){
   const closes=(d.feed||[]).filter(h=>CLOSED.has(h.changes?.status?.to));
@@ -1095,14 +1122,15 @@ document.addEventListener("click",e=>{
   if(e.target.id==="doupd") return applyUpdate(e.target);
   if(e.target.id==="scrim"||e.target.closest("[data-close]")) return closeDrawer();
   const o=e.target.closest("[data-open]");
-  if(o&&data){const v=o.dataset.open,i=v.indexOf(":"),k=v.slice(0,i),id=v.slice(i+1);({proj:openProject,theme:openTheme,person:openPerson,unfiled:openUnfiled,src:openSource})[k]?.(id);return}
+  if(o&&data){const v=o.dataset.open,i=v.indexOf(":"),k=v.slice(0,i),id=v.slice(i+1);({proj:openProject,theme:openTheme,person:openPerson,org:openOrg,unfiled:openUnfiled,src:openSource})[k]?.(id);return}
   const cp=e.target.closest("[data-copy]");
   if(cp){ const v=cp.dataset.copy; const isAdd=cp.classList.contains("addp");
     navigator.clipboard.writeText(v).then(()=>{ if(isAdd) $("#note").innerHTML=`<div class="banner">Copied — paste it in the chat and Claude will add the project here.</div>`; else cp.textContent="Copied — paste in chat"; },()=>{$("#note").innerHTML=`<div class="banner"><b>Paste this in the chat:</b><br>${esc(v)}</div>`;closeDrawer()}); return; }
-  const t=e.target.closest("[data-proj],[data-tab],[data-hz],[data-chf],[data-approve],[data-ask],[data-notify],[data-send],[data-id]");
+  const t=e.target.closest("[data-proj],[data-tab],[data-hz],[data-chf],[data-rk],[data-approve],[data-ask],[data-notify],[data-send],[data-id]");
   if(!t) return;
   if(t.dataset.proj){ if(t.dataset.proj===state.project) return; state.project=t.dataset.proj; store.set("hs.project",state.project); document.querySelectorAll("[data-proj]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.proj===state.project)); data=null; if(mcp) load(false); return; }
   if(t.dataset.tab){ state.tab=t.dataset.tab; store.set("hs.tab",state.tab); render(); return; }
+  if(t.dataset.rk){ RK=t.dataset.rk; store.set("hs.rk",RK); render(); return; }
   if(t.dataset.chf!==undefined){ CHF=t.dataset.chf||null; render(); return; }
   if(t.dataset.hz){ HZ=t.dataset.hz; store.set("hs.hz",HZ); render(); return; }
   if(t.dataset.approve){ approve(t); return; }
