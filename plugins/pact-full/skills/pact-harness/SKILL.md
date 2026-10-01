@@ -11,7 +11,7 @@ description: >-
   pact by itself.
 ---
 
-# Pact Harness v0.4.2
+# Pact Harness v0.4.3
 
 The harness is one HTML page. It calls the **viewer's own** Pact connectors
 from inside the page (the artifact's `mcp` capability), so every person needs
