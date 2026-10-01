@@ -9,7 +9,7 @@ description: >-
   runs /harness. It publishes one artifact; it never writes to a pact by itself.
 ---
 
-# Pact Harness v0.3.0
+# Pact Harness v0.3.8
 
 The harness is a page in `harness.html`, next to this file. It calls the
 viewer's own Pact connectors from inside the page, using the artifact's `mcp`
@@ -53,7 +53,7 @@ from `whoami`:
 - `title`: `<label> — Management Harness`.
 
 **`__CHANNELS__`** — the display names of the user's Slack and Gmail
-connectors, used by the "Notify" button on My day. Use `null` for one they
+connectors, used by the "Start follow-up" button on the Daily brief. Use `null` for one they
 don't have:
 
 ```js
@@ -80,11 +80,19 @@ server entry per connector:
 
 - Include the Slack and Gmail entries only for connectors the user has, and
   name the same ones in `__CHANNELS__`.
+- Also declare `"sample": {}` next to `mcp`. The page uses it to turn a pact's
+  latest notes into a one-line human summary. That runs on the viewer's
+  account, asks the viewer's consent once, and is cached per note. Without it,
+  the page falls back to a cleaned excerpt of the note.
 
 - Leave `list_history` out of a connector that doesn't expose it; the page
   falls back to goal notes and says so.
 - If the user already has a harness artifact from an earlier run, update that
   one (pass its URL) instead of creating a second.
+  When updating, keep every project already on it and add the new ones. The
+  page's "+" button copies exactly that request into the chat.
+- The page hides any declared project whose connector the viewer hasn't
+  connected, so declaring a connector they might add later is harmless.
 - If this surface has no Artifact tool, or it can't declare capabilities, say
   so plainly. Point them to Claude Code or Cowork, where it can. Never fall back
   to a static page with data pasted in.
@@ -98,7 +106,7 @@ Open it beside the conversation and tell the user, in one or two lines:
   evidence note, then sets the goal `done`.
 - "Copy for Claude" in any pact's panel copies its handle, so they can paste it
   here and keep talking about it.
-- **My day** opens first. It shows the user's overdue work, what is due this
+- **Daily brief** opens first. It shows the user's overdue work, what is due this
   week, what waits on their review, and what closed in the last three days,
   plus recommended actions. "Ask Claude" copies a ready-made instruction for
   the chat.
