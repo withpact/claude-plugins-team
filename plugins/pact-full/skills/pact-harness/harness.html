@@ -1,4 +1,4 @@
-<title>Management Harness</title>
+<title>__TITLE__</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -204,6 +204,7 @@ button.chip.src:hover{background:var(--p-soft);color:var(--p)}
 .item .rside small{font-size:11.5px;color:var(--ink-3)} .item .rside b{font-size:13px;font-weight:600;color:var(--head)}
 .box>.item:last-child{margin-bottom:12px}
 /* brief header */
+.banner.upd{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--p-soft)}
 .seg .addp{font-weight:600;color:var(--ink-3);min-width:30px}
 .brief-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .eyebrow{font-size:12.5px;color:var(--ink-3);font-weight:500}
@@ -237,9 +238,15 @@ button.chip.src:hover{background:var(--p-soft);color:var(--p)}
 <aside class="dr" id="dr" aria-label="Pact detail"></aside>
 
 <script>
-// Filled in by the pact-harness skill: one entry per Pact connector the user has.
-// key = project name (from whoami), server = the connector's display name.
+// The template's version. The page compares it with what the Pact server serves
+// (`harness_template`) and offers a one-click self-update when the server's is newer.
+const HARNESS_VERSION = "2026.10.02.1";
+// Filled in when the page is built (by /harness, or by the page's own update):
+// one entry per Pact connector; key = project name (from whoami), server = the
+// connector's display name.
 const PROJECTS = __PROJECTS__;
+// Page options: {add: show the "+" that asks Claude to add a project}.
+const OPTIONS = __OPTIONS__;
 const TABS = [["myday","Daily brief"],["activity","Activity"],["projects","Projects"],["themes","Themes"],["people","Resources"],["archive","Archive"]];
 const CLOSED = new Set(["done","cancelled"]);
 const TODAY = new Date().toISOString().slice(0,10);
@@ -851,8 +858,8 @@ function beadHTML(text){
   return h;
 }
 /* ---------- human-length text ---------- */
-// "SingleFile renews — the team uses the system…" → "SingleFile renews".
-// "revImpactActiveUse: Kendall and Ismael using the MCP" → the part after the alias.
+// "Acme renews — the team uses the system…" → "Acme renews".
+// "acmeActiveUse: two users on the MCP every week" → the part after the alias.
 function shortTitle(t){
   t=String(t||"").trim();
   const a=t.match(/^([a-z][A-Za-z0-9]+):\s+(.+)$/); if(a) t=a[2];
@@ -878,7 +885,7 @@ function latestBox(id,title,notes){
 async function summarize(key,slot,title,notes){
   if(!SAMPLE||SUM_INFLIGHT[key]) return; SUM_INFLIGHT[key]=1;
   const input=`You write one-glance status lines for a team dashboard that busy humans skim.
-In at most two short sentences (30 words total), say where this stands and how the people involved feel about it, in plain English, for example: "Efforts focused on delivering the daybook. Melissa and Chad are happy so far."
+In at most two short sentences (30 words total), say where this stands and how the people involved feel about it, in plain English, for example: "Efforts focused on delivering the onboarding flow. The client is happy so far."
 No IDs, dates, URLs, quotes or internal jargon (ASK, delta, run, pipeline stage). Write in the language the notes are mostly written in.
 Work item: ${title}
 Latest notes, newest first:
@@ -1041,10 +1048,11 @@ let SHOWN=Object.keys(PROJECTS);
 const ADD_PROMPT="Add any Pact project I have connected that isn't on my Management Harness yet: run /harness, keep the projects already on it, and update the same artifact.";
 function renderSwitcher(){
   $("#proj").innerHTML=SHOWN.map(k=>`<button type="button" data-proj="${k}" aria-pressed="${state.project===k}">${esc(PROJECTS[k].label)}</button>`).join("")
-    +`<button type="button" class="addp" data-copy="${esc(ADD_PROMPT)}" title="Add a project" aria-label="Add a project">+</button>`;
+    +(OPTIONS.add?`<button type="button" class="addp" data-copy="${esc(ADD_PROMPT)}" title="Add a project" aria-label="Add a project">+</button>`:"");
 }
 renderSwitcher();
 document.addEventListener("click",e=>{
+  if(e.target.id==="doupd") return applyUpdate(e.target);
   if(e.target.id==="scrim"||e.target.closest("[data-close]")) return closeDrawer();
   const o=e.target.closest("[data-open]");
   if(o&&data){const v=o.dataset.open,i=v.indexOf(":"),k=v.slice(0,i),id=v.slice(i+1);({proj:openProject,theme:openTheme,person:openPerson,unfiled:openUnfiled,src:openSource})[k]?.(id);return}
@@ -1069,6 +1077,46 @@ document.addEventListener("keydown",e=>{
 document.addEventListener("change",e=>{ if(e.target.id==="mepick"&&data){ store.set("hs.me."+data.project,e.target.value); data.myday=myDay(data,null); if(!e.target.value) data.myday.me=null; render(); } });
 $("#refresh").onclick=()=>{ if(mcp) load(true); };
 
+/* ---------- self-update: the page republishes itself from the server's template ---------- */
+// Nobody updates a plugin: the Pact server serves the latest template, the page
+// offers it, and one click republishes this same artifact with its own config.
+const TOKEN=k=>"__"+k+"__";   // built at runtime so this code never contains a literal token
+const SKELETON_HEAD='<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>';
+const jsLit=v=>JSON.stringify(v).replace(/</g,"\\u003c");
+let UPDATE=null;
+async function checkUpdate(){
+  let best=null;
+  for(const k of SHOWN){
+    try{
+      const r=await mcp.callTool(PROJECTS[k].server,"harness_template",{known_version:HARNESS_VERSION},{cache:{staleTime:300000,gcTime:3600000}});
+      const p=r&&r.payload;
+      if(p&&p.version&&p.html&&p.version>HARNESS_VERSION&&(!best||p.version>best.version)) best=p;
+    }catch{}
+  }
+  if(!best) return;
+  UPDATE=best;
+  $("#note").innerHTML=`<div class="banner upd"><span>A new version of the harness is ready.</span><button class="btn pri" id="doupd" type="button">Update</button></div>`;
+}
+async function applyUpdate(btn){
+  if(!UPDATE) return;
+  const art=window.claude?await window.claude.use("artifact").catch(()=>null):null;
+  const fail=t=>{ $("#note").innerHTML=`<div class="banner">${t}</div>`; };
+  if(!art) return fail(`This view can't update the page. Ask Claude in the chat: "update my Management Harness to the latest template".`);
+  btn.disabled=true; btn.textContent="Updating…";
+  let body=UPDATE.html
+    .replace(TOKEN("PROJECTS"),jsLit(PROJECTS))
+    .replace(TOKEN("CHANNELS"),jsLit(CHANNELS))
+    .replace(TOKEN("OPTIONS"),jsLit(OPTIONS))
+    .replace(TOKEN("TITLE"),esc(document.title));
+  if(["PROJECTS","CHANNELS","OPTIONS","TITLE"].some(k=>body.includes(TOKEN(k)))) return fail("The new template looks malformed; skipped.");
+  try{ await art.publish(SKELETON_HEAD+"\n"+body+"\n</body></html>"); }
+  catch(e){
+    if(e&&e.code==="conflict") return;   // the view is already reloading to the winner
+    btn.disabled=false; btn.textContent="Update";
+    fail(e&&(e.code==="not_writer"||e.code==="not_granted")?`Only the owner of this page can update it. Ask them to click Update.`:`Couldn't update just now (${esc(e&&e.code||"error")}).`);
+  }
+}
+
 (async()=>{
   mcp = window.claude ? await window.claude.use("mcp") : null;
   if(!mcp){ $("#fresh").textContent=""; $("#panel").innerHTML='<div class="banner err">Open this page in claude.ai with your Pact connectors to see live data.</div>'; return; }
@@ -1079,5 +1127,6 @@ $("#refresh").onclick=()=>{ if(mcp) load(true); };
     if(keep.length){ SHOWN=keep; if(!keep.includes(state.project)) state.project=keep[0]; renderSwitcher(); }
   }catch{}
   load(false);
+  setTimeout(checkUpdate,1500);
 })();
 </script>
