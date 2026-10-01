@@ -120,6 +120,14 @@ button{font:inherit;color:inherit}
 .nt{padding:10px 12px;border-bottom:1px solid var(--line);display:grid;gap:4px}
 .nt:last-child{border-bottom:0}
 .row>.k{align-self:start}
+.rico{display:inline-block;width:1.2em;text-align:center;color:var(--p)}
+select.btn{padding:4px 8px}
+.ta{width:100%;font:13.5px/1.45 var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
+.srow{display:grid;gap:4px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:0}
+button.chip.src{border:0;cursor:pointer;font-size:12px;padding:3px 9px}
+button.chip.src:hover{background:var(--p-soft);color:var(--p)}
+.clamp{font-size:13px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;white-space:pre-wrap}
 .skel{height:14px;border-radius:6px;background:var(--surface-2);margin:10px 12px}
 </style>
 
@@ -145,7 +153,7 @@ button{font:inherit;color:inherit}
 // Filled in by the pact-harness skill: one entry per Pact connector the user has.
 // key = project name (from whoami), server = the connector's display name.
 const PROJECTS = __PROJECTS__;
-const TABS = [["activity","Activity"],["projects","Projects"],["themes","Themes"],["people","Resources"],["archive","Archive"]];
+const TABS = [["myday","My day"],["activity","Activity"],["projects","Projects"],["themes","Themes"],["people","Resources"],["archive","Archive"]];
 const CLOSED = new Set(["done","cancelled"]);
 const TODAY = new Date().toISOString().slice(0,10);
 
@@ -158,7 +166,7 @@ function fmtTime(iso){const d=new Date(iso);return isNaN(d)?"":d.toLocaleTimeStr
 function ago(ms){const m=Math.round((Date.now()-ms)/60000);return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+" h ago"}
 function short(name){return (name||"").replace(/^beads-mcp:/,"")}
 
-let state = {project: store.get("hs.project") || Object.keys(PROJECTS)[0], tab: store.get("hs.tab") || "activity"};
+let state = {project: store.get("hs.project") || Object.keys(PROJECTS)[0], tab: store.get("hs.tab") || "myday"};
 if(!PROJECTS[state.project]) state.project = Object.keys(PROJECTS)[0];
 let mcp = null, data = null, loadSeq = 0;
 
@@ -233,6 +241,8 @@ async function load(fresh){
   const storedAt=Math.min(...[goalsR,openR].map(r=>r.cache?.storedAt||Date.now()));
   const goals=parseList(goalsR.payload), open=parseList(openR.payload), doneGoals=parseList(doneR.payload);
 
+  let me=null;
+  try{ const w=String((await call("whoami",{},fresh)).payload||""); me=(w.match(/Connected as `([^`]+)`/)||[])[1]||null; }catch{}
   let history=null, historyErr=null;
   try{ const h=await call("list_history",{days:14,limit:400},fresh); history=(h.payload&&h.payload.items)||[]; }
   catch(e){ historyErr=e; }
@@ -241,7 +251,208 @@ async function load(fresh){
   if(seq!==loadSeq) return;
   goals.forEach((g,i)=>Object.assign(g,details[i]||{children:[],parents:[],notes:[],type:""}));
   data=shape(proj,goals,open,doneGoals,history,historyErr,storedAt);
+  data.myday=myDay(data,me);
   render();
+  loadSources(fresh,seq);
+}
+
+/* ---------- My day: what matters to the viewer today ---------- */
+const DAY=864e5;
+const daysBetween=(a,b)=>Math.round((new Date(b+"T12:00:00")-new Date(a+"T12:00:00"))/DAY);
+const first=n=>String(n||"").split(/\s+/)[0];
+function resolveMe(d,dev){
+  const names=new Set(); for(const b of d.open){names.add(b.assignee);names.add(b.approver)}
+  const real=[...names].filter(n=>n&&n!=="unassigned"&&n!=="—");
+  const saved=store.get("hs.me."+d.project); if(saved&&real.includes(saved)) return {name:saved,names:real};
+  const k=String(dev||"").toLowerCase().replace(/^beads-mcp:/,"");
+  const hit=k&&(real.find(n=>n.toLowerCase()===k)||real.find(n=>first(n).toLowerCase()===k)||real.find(n=>n.toLowerCase().replace(/\s+/g,"").includes(k)));
+  return {name:hit||null,names:real.sort()};
+}
+function myDay(d,dev){
+  const who=resolveMe(d,dev); const me=who.name;
+  const out={me,names:who.names,count:0,overdue:[],soon:[],review:[],blocked:[],justDone:[],recs:[]};
+  if(!me) return out;
+  const mine=b=>b.assignee===me, iApprove=b=>b.approver===me;
+  const weekOut=new Date(Date.now()+7*DAY).toISOString().slice(0,10);
+  out.overdue=d.open.filter(b=>mine(b)&&b.due&&b.due<TODAY).sort((a,b)=>a.due.localeCompare(b.due));
+  out.soon=d.open.filter(b=>mine(b)&&b.due&&b.due>=TODAY&&b.due<=weekOut).sort((a,b)=>a.due.localeCompare(b.due));
+  out.review=d.open.filter(b=>iApprove(b)&&!mine(b)&&b.status==="review");
+  out.blocked=d.open.filter(b=>(mine(b)||iApprove(b))&&b.status==="blocked");
+  const parentOf=new Map(); for(const g of d.goals) for(const c of g.children) if(!parentOf.has(c.id)) parentOf.set(c.id,g);
+  const since3=new Date(Date.now()-3*DAY).toISOString();
+  const seen=new Set();
+  for(const e of (d.feed||[])){
+    const to=e.changes?.status?.to; if(to!=="done"||String(e.timestamp)<since3) continue;
+    const id=(e.bead_id||"").replace("BEAD-","PACT-"); if(seen.has(id)) continue; seen.add(id);
+    const g=parentOf.get(id); const item=d.byId.get(id)||{};
+    const relevant=!g||g.assignee===me||g.approver===me||item.assignee===me||item.approver===me||short(e.changed_by).toLowerCase()===String(dev||"").toLowerCase();
+    if(relevant) out.justDone.push({id,title:e.title||item.title||"",when:e.timestamp,by:short(e.changed_by),goal:g||null});
+  }
+  // recommended actions — deterministic rules over the board
+  const R=out.recs;
+  for(const g of d.closeCands) if(g.assignee===me||g.approver===me)
+    R.push({kind:"close",id:g.id,title:`${g.id} looks ready to close`,why:g.evidence,approve:g.id});
+  const byPerson=new Map();
+  for(const j of out.justDone){const g=j.goal; if(!g) continue; for(const who of [g.approver,g.assignee]){ if(!who||who===me||who==="unassigned"||who==="—") continue; if(!byPerson.has(who)) byPerson.set(who,[]); byPerson.get(who).push(j); break; }}
+  for(const [who,js] of byPerson){
+    const goals=[...new Set(js.map(j=>j.goal.title))];
+    const g0=js[0].goal;
+    const draft=`Hi ${first(who)} — quick update on ${goals.join(" and ")}:\n${js.map(j=>`• ${j.id} ${j.title} — closed`).join("\n")}\n${goals.length===1&&g0.total?`That puts it at ${g0.closed}/${g0.total} done.`:""}\nHappy to walk you through it.`;
+    R.push({kind:"notify",to:who,draft,bead:js[0].id,title:`Tell ${first(who)} about recent progress`,why:`${js.length} closed under ${goals.join(", ")} — ${first(who)} is on ${goals.length>1?"those goals":"that goal"}.`,
+      prompt:`Draft a short message to ${who} about recent progress: ${js.map(j=>`${j.id} "${j.title}" was closed`).join("; ")}. Say what it moves forward in ${goals.join(", ")} (read the goal with get_bead), keep it to 3–4 lines, and show me the draft before sending anything.`});
+  }
+  for(const b of out.overdue){const late=daysBetween(b.due,TODAY); if(late>=14) R.push({kind:"late",id:b.id,title:`${b.id} is ${late} days late`,why:b.title,
+    prompt:`${b.id} "${b.title}" is ${late} days past its due date (${b.due}). Read it with get_bead (full notes) and help me decide: reschedule to a realistic date, close it with its evidence, or cancel it. Propose one, don't change anything until I confirm.`});}
+  for(const b of out.review) R.push({kind:"review",id:b.id,title:`${b.id} is waiting for your review`,why:`${b.title} — from ${first(b.assignee)}`,
+    prompt:`${b.id} "${b.title}" is in review and I'm the approver. Read it with get_bead (full notes) and summarize what was delivered against its acceptance criteria, so I can approve or send it back.`});
+  for(const b of out.blocked) R.push({kind:"blocked",id:b.id,title:`Unblock ${b.id}`,why:`${b.title} — ${b.assignee===me?"yours":"you approve it"}`,
+    prompt:`${b.id} "${b.title}" is blocked. Read its notes with get_bead and tell me what it's waiting on, who can unblock it, and draft the one message that would move it.`});
+  const myUnfiled=d.unfiled.filter(mine);
+  if(myUnfiled.length) R.push({kind:"link",title:`Link ${myUnfiled.length} of your task${myUnfiled.length>1?"s":""} to a goal`,why:myUnfiled.slice(0,3).map(b=>b.id).join(", ")+(myUnfiled.length>3?"…":""),
+    prompt:`These open tasks of mine aren't under any goal: ${myUnfiled.map(b=>`${b.id} "${b.title}"`).join("; ")}. Propose which goal each one belongs under (list_goals), and link them only after I confirm.`});
+  out.count=out.overdue.length+out.review.length+R.length;
+  return out;
+}
+function myDayHTML(d){
+  const m=d.myday||{names:[]};
+  const pick=`<select id="mepick" class="btn" aria-label="Who are you">${['<option value="">Who are you?</option>',...m.names.map(n=>`<option ${n===m.me?"selected":""}>${esc(n)}</option>`)].join("")}</select>`;
+  if(!m.me) return `<div class="banner">Pick your name to see your day. ${pick}</div>`;
+  const icon={close:"✓",notify:"✉",late:"⏰",review:"◎",blocked:"⚠",link:"⛓"};
+  let h=`<div class="spread"><h2>${esc(first(m.me))}'s day · ${esc(fmtDay(TODAY))}</h2>${pick}</div>`;
+  h+=`<div class="trio">${stat(m.overdue.length,"overdue",1)}${stat(m.soon.length,"due this week")}${stat(m.justDone.length,"closed · 3 days")}</div>`;
+  h+=`<div class="box"><div class="box-h"><h2>Recommended</h2><span class="dim">${m.recs.length}</span></div>${m.recs.length?m.recs.map((r,i)=>`<div class="cl"><div><div class="t" ${r.id?`data-id="${esc(r.id)}"`:""}><span class="rico">${icon[r.kind]||"•"}</span> ${esc(r.title)}</div><div class="ev">${esc(r.why)}</div></div>${r.approve?`<button class="btn pri" data-approve="${esc(r.approve)}" type="button">Approve</button>`:r.kind==="notify"?`<button class="btn pri" data-notify="${i}" type="button">Notify</button>`:`<button class="btn" data-ask="${i}" type="button">Ask Claude</button>`}</div>`).join(""):'<div class="empty">Nothing needs you right now.</div>'}</div>`;
+  const list=(title,xs,extra)=>xs.length?`<div class="box"><div class="box-h"><h2>${title}</h2><span class="dim">${xs.length}</span></div>${xs.map(b=>rowHTML(b,extra?extra(b):undefined)).join("")}</div>`:"";
+  h+=list("Overdue on your plate",m.overdue,b=>`<span class="k late">${daysBetween(b.due,TODAY)}d late</span>`);
+  h+=list("Waiting on your review",m.review);
+  h+=list("Due this week",m.soon);
+  if(m.justDone.length) h+=`<div class="box"><div class="box-h"><h2>Just closed</h2><span class="dim">last 3 days</span></div>${m.justDone.map(j=>rowHTML({id:j.id,title:j.title,status:"done"},`${esc(j.by)} · ${esc(fmtDay(String(j.when)))}`)).join("")}</div>`;
+  else if(!d.feed) h+=`<div class="empty">"Just closed" needs the list_history tool on this project.</div>`;
+  return h;
+}
+/* ---------- notify: start the conversation on whatever channel the viewer has ---------- */
+// Filled in by the pact-harness skill: the display names of the viewer's Slack
+// and Gmail connectors, or null for one they don't have.
+const CHANNELS = __CHANNELS__;
+let AVAIL=null;
+async function channels(){
+  if(AVAIL) return AVAIL;
+  AVAIL=new Set();
+  try{ const r=await mcp.listTools(); for(const sv of r.servers||[]) if((sv.tools||[]).length&&sv.authStatus!=="needs_reauth") AVAIL.add(sv.server); }catch{}
+  return AVAIL;
+}
+async function openNotify(i){
+  const r=data.myday.recs[i]; if(!r) return;
+  const av=await channels(); const pactServer=PROJECTS[state.project].server;
+  const opts=[];
+  if(CHANNELS.slack&&av.has(CHANNELS.slack)) opts.push(`<button class="btn pri" data-send="slack" type="button">Slack draft</button>`);
+  if(CHANNELS.gmail&&av.has(CHANNELS.gmail)) opts.push(`<button class="btn" data-send="gmail" type="button">Gmail draft</button>`);
+  if(av.has(pactServer)) opts.push(`<button class="btn" data-send="pact" type="button">Send in Pact</button>`);
+  opts.push(`<button class="btn" data-send="claude" type="button">Copy for Claude</button>`);
+  showDr(`${drHead("Notify",r.to)}
+    <div class="dbox"><span class="eb">Why</span>${esc(r.why)}</div>
+    <label class="eb" for="nmsg">Message</label>
+    <textarea id="nmsg" rows="8" class="ta">${esc(r.draft)}</textarea>
+    ${CHANNELS.gmail&&av.has(CHANNELS.gmail)?`<label class="eb" for="nmail">Email for a Gmail draft</label><input id="nmail" class="ta" type="email" placeholder="${esc(first(r.to).toLowerCase())}@…">`:""}
+    <div class="ctl">${opts.join("")}</div>
+    <div id="nres" class="who">Slack and Gmail create a <b>draft</b> — nothing is sent until you send it there. "Send in Pact" delivers to ${esc(first(r.to))}'s Pact inbox.</div>`);
+  $("#dr").dataset.rec=i;
+}
+async function sendNotify(btn){
+  const r=data.myday.recs[+$("#dr").dataset.rec]; const how=btn.dataset.send;
+  const msg=$("#nmsg").value.trim(); const res=$("#nres");
+  const say=h=>{res.innerHTML=h};
+  if(how==="claude"){ const p=`Help me send this to ${r.to} (pick the best channel I have connected, show me before sending):\n\n${msg}`; try{await navigator.clipboard.writeText(p);say("Copied — paste it in the chat.")}catch{say(`<b>Paste this in the chat:</b><br>${esc(p)}`)} return; }
+  if(how==="pact"&&!btn.classList.contains("arm")){ btn.classList.add("arm"); btn.textContent="Confirm send"; return; }
+  btn.disabled=true; say("Working…");
+  try{
+    if(how==="slack"){
+      const u=await mcp.callTool(CHANNELS.slack,"slack_search_users",{query:r.to,response_format:"concise",limit:3});
+      const txt=typeof u.payload==="string"?u.payload:String(u.payload?.results||"");
+      const id=(txt.match(/ - (U[A-Z0-9]{6,}) - /)||[])[1];
+      if(!id) throw {message:`Couldn't find ${r.to} in Slack.`};
+      const d=await mcp.callTool(CHANNELS.slack,"slack_send_message_draft",{channel_id:id,message:msg});
+      const link=(typeof d.payload==="object"&&d.payload?.channel_link)||(String(d.payload||"").match(/https:\/\/\S+/)||[])[0];
+      say(`Draft ready in your DM with ${esc(first(r.to))}${link?` — <a href="${esc(link)}" target="_blank" rel="noopener">open Slack ↗</a>`:""}. Review it and hit send there.`);
+    } else if(how==="gmail"){
+      const to=($("#nmail")?.value||"").trim(); if(!/^\S+@\S+\.\S+$/.test(to)) throw {message:"Add their email first."};
+      const d=await mcp.callTool(CHANNELS.gmail,"create_draft",{to:[to],subject:"Quick update",body:msg});
+      const url=typeof d.payload==="object"?d.payload?.viewUrl:"";
+      say(`Gmail draft created${url?` — <a href="${esc(url)}" target="_blank" rel="noopener">open ↗</a>`:""}.`);
+    } else if(how==="pact"){
+      await mcp.callTool(PROJECTS[state.project].server,"message_user",{recipient:r.to,message:msg,bead_id:r.bead});
+      say(`Sent to ${esc(first(r.to))}'s Pact inbox. You'll get a read receipt.`);
+    }
+    btn.textContent="Done ✓";
+  }catch(e){ btn.disabled=false; btn.classList.remove("arm"); btn.textContent={slack:"Slack draft",gmail:"Gmail draft",pact:"Send in Pact"}[how]; say(`<span style="color:var(--warn)">${esc(e.code?errText(e,"the connector"):e.message||"Failed.")}</span>`); }
+}
+async function askClaude(btn){
+  const r=data.myday.recs[+btn.dataset.ask]; if(!r) return;
+  try{ await navigator.clipboard.writeText(r.prompt); btn.textContent="Copied — paste in chat"; }
+  catch{ $("#note").innerHTML=`<div class="banner"><b>Paste this in the chat:</b><br>${esc(r.prompt)}</div>`; }
+}
+
+/* ---------- sources: what the signal-graph pipelines ingested ---------- */
+const SRC_DAYS=14;
+function toolText(e){
+  const r=e&&e.result; const c=r&&(r.content||r.result?.content);
+  return String((e&&e.message)||"")+" "+(Array.isArray(c)?c.map(b=>b.text||"").join(" "):"");
+}
+function fenceJSON(t){const m=String(t||"").match(/```json\s*([\s\S]*?)```/);try{return m?JSON.parse(m[1]):[]}catch{return []}}
+function platform(src){return (String(src||"Other").split(/[\s·:—-]+/)[0]||"Other")}
+async function loadSources(fresh,seq){
+  const proj=state.project;
+  let pipes;
+  try{ await call("graph_read",{kind:"runs",stage:"ingest",limit:1},fresh); pipes=[null]; }
+  catch(e){
+    const m=toolText(e).match(/more than one pipeline \(([^)]+)\)/);
+    if(!m){ if(seq===loadSeq&&data){data.sources=[];if(state.tab==="activity")render()} return; }
+    pipes=m[1].split(",").map(x=>x.trim()).filter(Boolean);
+  }
+  const since=new Date(Date.now()-SRC_DAYS*864e5).toISOString();
+  const out=await pool(pipes,3,async pipe=>{
+    const base=pipe?{pipeline:pipe}:{};
+    const runsTxt=String((await call("graph_read",{...base,kind:"runs",stage:"ingest",limit:500},fresh)).payload||"");
+    const runs=[...runsTxt.matchAll(/`run_(\S+?)_ingest` · ingest · (\w+) · in:(\d+) out:(\d+)/g)].map(m=>({ts:m[1],status:m[2],out:+m[4]}));
+    const total=runs.reduce((a,r)=>a+r.out,0);
+    const win=runs.filter(r=>r.ts>=since); const winCount=win.reduce((a,r)=>a+r.out,0);
+    let items=[];
+    if(winCount){
+      const r=await call("graph_read",{...base,kind:"raw",format:"full",limit:500,since_seq:Math.max(0,total-winCount-60)},fresh);
+      items=fenceJSON(r.payload).filter(x=>{const m=String(x.run_id||"").match(/^run_(\S+?)_ingest/);return m&&m[1]>=since})
+        .sort((a,b)=>String(b.occurred_at||"").localeCompare(String(a.occurred_at||"")));
+    }
+    return {pipeline:pipe,last:runs[0]||null,items};
+  });
+  if(seq!==loadSeq||!data||state.project!==proj) return;
+  data.sources=out.filter(Boolean);
+  if(state.tab==="activity") render();
+}
+function sourcesHTML(d){
+  if(d.sources===undefined) return `<div class="box"><div class="box-h"><h2>Sources</h2><span class="dim">loading…</span></div></div>`;
+  if(!d.sources.length) return "";
+  const multi=d.sources.length>1;
+  const rows=d.sources.map(p=>{
+    const by={}; for(const it of p.items){const k=platform(it.source);by[k]=(by[k]||0)+1}
+    const chips=Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<button class="chip src" data-open="src:${esc(p.pipeline||"")}|${esc(k)}" type="button">${esc(k)} <b>${n}</b></button>`).join("");
+    const last=p.last?`last ingest ${esc(fmtDay(p.last.ts))} ${esc(fmtTime(p.last.ts))}${p.last.status!=="ok"?` · <span class="k late">${esc(p.last.status)}</span>`:""}`:"never ingested";
+    return `<div class="srow">${multi?`<span class="mono">${esc(p.pipeline)}</span>`:""}<span class="chips">${chips||'<span class="dim">nothing new</span>'}</span><span class="who">${last}</span></div>`;
+  }).join("");
+  const n=d.sources.reduce((a,p)=>a+p.items.length,0);
+  return `<div class="box"><div class="box-h"><h2>Sources · ${SRC_DAYS} days</h2><span class="dim">${n} items ingested</span></div>${rows}</div>`;
+}
+function openSource(key){
+  const [pipe,plat]=key.split("|");
+  const p=data.sources.find(x=>(x.pipeline||"")===pipe); if(!p) return;
+  const items=p.items.filter(it=>platform(it.source)===plat);
+  const groups={}; for(const it of items)(groups[it.source||plat]=groups[it.source||plat]||[]).push(it);
+  const used=items.filter(i=>(i.signals||[]).length).length;
+  showDr(`${drHead((pipe?pipe+" · ":"")+"source",plat)}
+    <div class="trio">${stat(items.length,"items")}${stat(used,"produced signals")}${stat(items.filter(i=>i.status==="skipped").length,"skipped")}</div>
+    ${Object.entries(groups).sort((a,b)=>b[1].length-a[1].length).map(([src,xs])=>`<h3>${esc(src)} · ${xs.length}</h3><div class="box">${xs.map(it=>`<div class="nt">
+      <div class="spread"><span class="who">${esc((it.actors||[]).join(", ")||"—")}</span><span class="who">${esc(fmtDay(it.occurred_at||""))} ${esc(fmtTime(it.occurred_at||""))}${it.link?` · <a href="${esc(it.link)}" target="_blank" rel="noopener">open ↗</a>`:""}</span></div>
+      <div class="clamp">${esc(it.text||"")}</div>
+      <div class="who">${it.status==="skipped"?`skipped${it.skip_reason?": "+esc(it.skip_reason):""}`:(it.signals||[]).length?`→ ${(it.signals||[]).length} signal${it.signals.length>1?"s":""} <span class="mono">${esc(it.signals.join(", "))}</span>`:esc(it.status||"")}</div>
+    </div>`).join("")}</div>`).join("")}`);
 }
 
 /* ---------- shaping ---------- */
@@ -312,7 +523,7 @@ function rowHTML(b,extra){
   return `<div class="row" data-id="${esc(b.id)}" tabindex="0" role="button">${status(b.status)}<span class="t"><span class="mono dim">${esc(b.id)}</span> ${esc(b.title)}</span><span class="s">${extra??(b.due?`<span class="${late?"k late":""}">${esc(fmtDay(b.due))}</span>`:"")}</span></div>`;
 }
 function renderTabs(){
-  const d=data; const n={activity:(d.feed||d.fallbackFeed).length,projects:d.projects.length,themes:d.themes.length,people:d.resources.length,archive:d.doneGoals.length};
+  const d=data; const n={myday:(d.myday?d.myday.count:0),activity:(d.feed||d.fallbackFeed).length,projects:d.projects.length,themes:d.themes.length,people:d.resources.length,archive:d.doneGoals.length};
   $("#tabs").innerHTML=TABS.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${state.tab===k}" data-tab="${k}"><b>${n[k]}</b><span>${l}</span></button>`).join("");
 }
 function render(){
@@ -321,6 +532,7 @@ function render(){
   $("#note").innerHTML="";
   renderTabs();
   const P=$("#panel");
+  if(state.tab==="myday") P.innerHTML=myDayHTML(d);
   if(state.tab==="activity") P.innerHTML=activityHTML(d);
   if(state.tab==="projects") P.innerHTML=projectsHTML(d);
   if(state.tab==="themes") P.innerHTML=themesHTML(d);
@@ -342,6 +554,7 @@ function activityHTML(d){
   h+= d.closeCands.length? d.closeCands.map(g=>`<div class="cl"><div><div class="t" data-id="${esc(g.id)}"><span class="mono dim">${esc(g.id)}</span> ${esc(g.title)}</div><div class="ev">${esc(g.evidence)}</div></div><button class="btn pri" data-approve="${esc(g.id)}" type="button">Approve</button></div>`).join("")
     : `<div class="empty">No open goal has all of its children closed.</div>`;
   h+=`</div>`;
+  h+=sourcesHTML(d);
   if(d.unfiled.length) h+=`<div class="banner">${d.unfiled.length} open task${d.unfiled.length>1?"s":""} aren't under any goal — <button class="btn" data-open="unfiled:1" type="button">see which</button></div>`;
   const feed=d.feed||d.fallbackFeed;
   if(!d.feed) h+=`<div class="banner">Showing goal notes only. The full history (status moves, creations, every note) needs the <b>list_history</b> tool — reconnect ${esc(PROJECTS[d.project].server)} once it's deployed.</div>`;
@@ -585,18 +798,22 @@ $("#proj").innerHTML=Object.entries(PROJECTS).map(([k,p])=>`<button type="button
 document.addEventListener("click",e=>{
   if(e.target.id==="scrim"||e.target.closest("[data-close]")) return closeDrawer();
   const o=e.target.closest("[data-open]");
-  if(o&&data){const v=o.dataset.open,i=v.indexOf(":"),k=v.slice(0,i),id=v.slice(i+1);({proj:openProject,theme:openTheme,person:openPerson,unfiled:openUnfiled})[k]?.(id);return}
-  const t=e.target.closest("[data-proj],[data-tab],[data-approve],[data-id]");
+  if(o&&data){const v=o.dataset.open,i=v.indexOf(":"),k=v.slice(0,i),id=v.slice(i+1);({proj:openProject,theme:openTheme,person:openPerson,unfiled:openUnfiled,src:openSource})[k]?.(id);return}
+  const t=e.target.closest("[data-proj],[data-tab],[data-approve],[data-ask],[data-notify],[data-send],[data-id]");
   if(!t) return;
   if(t.dataset.proj){ if(t.dataset.proj===state.project) return; state.project=t.dataset.proj; store.set("hs.project",state.project); document.querySelectorAll("[data-proj]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.proj===state.project)); data=null; if(mcp) load(false); return; }
   if(t.dataset.tab){ state.tab=t.dataset.tab; store.set("hs.tab",state.tab); render(); return; }
   if(t.dataset.approve){ approve(t); return; }
+  if(t.dataset.ask!==undefined){ askClaude(t); return; }
+  if(t.dataset.notify!==undefined){ openNotify(+t.dataset.notify); return; }
+  if(t.dataset.send){ sendNotify(t); return; }
   if(t.dataset.id){ openDrawer(t.dataset.id); }
 });
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape") closeDrawer();
   if((e.key==="Enter"||e.key===" ")&&e.target.matches(".row[data-id],.row[data-open]")){e.preventDefault();e.target.click()}
 });
+document.addEventListener("change",e=>{ if(e.target.id==="mepick"&&data){ store.set("hs.me."+data.project,e.target.value); data.myday=myDay(data,null); if(!e.target.value) data.myday.me=null; render(); } });
 $("#refresh").onclick=()=>{ if(mcp) load(true); };
 
 (async()=>{

@@ -9,7 +9,7 @@ description: >-
   runs /harness. It publishes one artifact; it never writes to a pact by itself.
 ---
 
-# Pact Harness v0.2.3
+# Pact Harness v0.3.0
 
 The harness is a page in `harness.html`, next to this file. It calls the
 viewer's own Pact connectors from inside the page, using the artifact's `mcp`
@@ -33,10 +33,13 @@ Each Pact connector is a beads-api server. You can recognise one by its tools
 - With no Pact connector, stop. Tell them to add their Pact connector in
   claude.ai → Settings → Connectors first.
 
-## 2. Fill the placeholder
+## 2. Fill the placeholders
 
-Read `harness.html`. Replace the single token `__PROJECTS__` with a JS object
-literal. The key is the project name from `whoami`:
+Read `harness.html`. It has two tokens. Replace each with a JS object literal
+and change nothing else in the file.
+
+**`__PROJECTS__`** — one entry per Pact connector. The key is the project name
+from `whoami`:
 
 ```js
 {
@@ -49,8 +52,18 @@ literal. The key is the project name from `whoami`:
 - `server`: the exact connector display name.
 - `title`: `<label> — Management Harness`.
 
-Change nothing else in the file. Write the result to a working file named
-`harness-<first-project>.html`.
+**`__CHANNELS__`** — the display names of the user's Slack and Gmail
+connectors, used by the "Notify" button on My day. Use `null` for one they
+don't have:
+
+```js
+{"slack": "Slack", "gmail": "Gmail"}
+```
+
+A Slack connector is the one with `slack_search_users` and
+`slack_send_message_draft`. A Gmail connector is the one with `create_draft`.
+
+Write the result to a working file named `harness-<first-project>.html`.
 
 ## 3. Publish
 
@@ -59,9 +72,14 @@ server entry per connector:
 
 ```json
 {"mcp": {"servers": [
-  {"server": "<display name>", "tools": ["list_goals", "list_beads", "get_bead", "list_history", "add_note", "update_status"]}
+  {"server": "<Pact display name>", "tools": ["whoami", "list_goals", "list_beads", "get_bead", "list_history", "graph_read", "add_note", "update_status", "message_user"]},
+  {"server": "<Slack display name>", "tools": ["slack_search_users", "slack_send_message_draft"]},
+  {"server": "<Gmail display name>", "tools": ["create_draft"]}
 ]}}
 ```
+
+- Include the Slack and Gmail entries only for connectors the user has, and
+  name the same ones in `__CHANNELS__`.
 
 - Leave `list_history` out of a connector that doesn't expose it; the page
   falls back to goal notes and says so.
@@ -80,6 +98,13 @@ Open it beside the conversation and tell the user, in one or two lines:
   evidence note, then sets the goal `done`.
 - "Copy for Claude" in any pact's panel copies its handle, so they can paste it
   here and keep talking about it.
+- **My day** opens first. It shows the user's overdue work, what is due this
+  week, what waits on their review, and what closed in the last three days,
+  plus recommended actions. "Ask Claude" copies a ready-made instruction for
+  the chat.
+- "Notify" writes a Slack or Gmail **draft**, so nothing is sent until they
+  send it. "Send in Pact" does send, to the person's Pact inbox, after a second
+  click.
 
 The page is private to them until they share it from its Share menu. Anyone it
 is shared with sees it through *their own* connectors, not the author's.
