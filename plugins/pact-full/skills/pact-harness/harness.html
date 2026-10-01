@@ -71,7 +71,7 @@ button{font:inherit;color:inherit}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
 .card{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px 12px;display:grid;gap:6px;align-content:start}
 .card:hover{border-color:var(--p)} .card:focus-visible{outline:2px solid var(--focus)}
-.card.late{border-left:4px solid var(--warn)}
+.card.late{}
 .card .t{font-weight:600;font-size:13.5px;overflow-wrap:anywhere}
 .meta{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:12px;color:var(--ink-2)}
 .pbar{height:5px;border-radius:999px;background:var(--surface-2);overflow:hidden}
@@ -97,7 +97,7 @@ button{font:inherit;color:inherit}
 .date{display:grid;place-items:center;min-width:44px;padding:4px 6px;border-radius:8px;background:var(--surface-2);line-height:1.05;text-align:center;flex:none}
 .date b{font-size:18px}
 .date span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
-.date.late{background:var(--warn-soft)} .date.late b,.date.late span{color:var(--warn)}
+.date.late b{color:var(--warn)} .date.late span{color:var(--warn);opacity:.75}
 .chips{display:flex;flex-wrap:wrap;gap:5px}
 .chip{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap;font-weight:500}
 .chip.late{background:var(--warn-soft);color:var(--warn)} .chip.go{background:var(--p-soft);color:var(--p)} .chip.ok{background:var(--a-soft);color:var(--a)}
@@ -118,10 +118,12 @@ button{font:inherit;color:inherit}
 .tl-ax{position:relative;height:18px;font-size:10.5px;color:var(--ink-3)}
 .tl-ax span{position:absolute;transform:translateX(-50%)}
 .agrp{display:grid;gap:8px}
-.agrp-h{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:6px 10px;border-radius:8px;background:var(--a-soft)}
-.agrp-h b{color:var(--a)} .agrp-h.warn{background:var(--warn-soft)} .agrp-h.warn b{color:var(--warn)}
+.agrp-h{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:10px 2px 2px;border-bottom:1px solid var(--line)}
+.agrp-h b{color:var(--ink);font-size:15px} .agrp-h .lc{color:var(--warn)} .agrp-h:hover b{text-decoration:underline}
+.unf{all:unset;box-sizing:border-box;cursor:pointer;display:flex;gap:6px;align-items:center;padding:8px 12px;border:1px dashed var(--line);border-radius:10px;font-size:13px;color:var(--ink-2)} .unf:hover{border-color:var(--ink-3)}
+.chip.close{background:var(--a-soft);color:var(--a)}
 .agrp-h:focus-visible{outline:2px solid var(--focus)}
-.card.tint{border-left:4px solid var(--a)} .card.tint.warn{border-left-color:var(--warn)}
+.card.tint{border-left:4px solid var(--a)} .card.tint.warn{border-left-color:var(--a)}
 .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .trio div{display:grid;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px}
 .trio b{font-size:22px} .trio b.w{color:var(--warn)}
@@ -258,7 +260,7 @@ button.chip.linkc{border:0;cursor:pointer} button.chip.linkc:hover{background:va
 <script>
 // The template's version. The page compares it with what the Pact server serves
 // (`harness_template`) and offers a one-click self-update when the server's is newer.
-const HARNESS_VERSION = "2026.10.02.4";
+const HARNESS_VERSION = "2026.10.02.5";
 // Filled in when the page is built (by /harness, or by the page's own update):
 // one entry per Pact connector; key = project name (from whoami), server = the
 // connector's display name.
@@ -831,12 +833,12 @@ function pcard(p){
   return `<button class="card ${p.late?"late":""}" data-open="proj:${esc(p.id)}" type="button">
     <span class="hrow">${dateBox(p.due)}<span style="display:grid;gap:2px;min-width:0"><span class="mono dim">${esc(p.id)}</span><span class="t">${esc(p.title)}</span></span></span>
     ${p.total?`<span class="pbar"><i style="width:${p.closed/p.total*100}%"></i></span><span class="mono dim">${p.closed}/${p.total} closed${p.blockedKids?` · <span style="color:var(--warn)">${p.blockedKids} blocked</span>`:""}${p.lateKids?` · <span style="color:var(--warn)">${p.lateKids} overdue</span>`:""}</span>`:`<span class="mono dim">nothing hangs from it</span>`}
-    <span class="spread"><span class="chips">${chipSt(p.status)}${p.late?`<span class="chip late">overdue</span>`:""}</span><span class="avs">${av(p.assignee,"pact")}${av(p.approver)}</span></span>
+    <span class="spread"><span class="chips">${chipSt(p.status)}${p.total&&p.closed===p.total?`<span class="chip close">all done · close it?</span>`:""}</span><span class="avs">${av(p.assignee,"pact")}${av(p.approver)}</span></span>
   </button>`;
 }
 function unfiledBar(d){
   const u=d.unfiled; if(!u.length) return "";
-  return `<button class="agrp-h warn" data-open="unfiled:1" type="button"><span class="dot warn"></span><b>${u.length} open task${u.length>1?"s are":" is"} not linked to any goal</b><span class="dim" style="font-size:12px">open to see which</span></button>`;
+  return `<button class="unf" data-open="unfiled:1" type="button">${u.length} open task${u.length>1?"s aren't":" isn't"} linked to any goal <span class="dim">· see which →</span></button>`;
 }
 function projectsHTML(d){
   if(!d.projects.length) return `<div class="empty">No open goal or milestone has a due date.</div>`;
@@ -849,7 +851,7 @@ function projectsHTML(d){
   return `<div class="spread"><h2>Projects</h2>${seg}</div>
     <div class="dim" style="font-size:12px">${shown.length} project${shown.length===1?"":"s"} due ${days?`in the ${hz[1].toLowerCase()}`:"at any time"}, overdue included${hidden?` · ${hidden} later hidden`:""} · <span style="color:var(--warn)">●</span> overdue</div>
     ${shown.length?timeline(shown,days):`<div class="empty">Nothing due ${hz[1].toLowerCase()}.</div>`}${unfiledBar(d)}
-    ${groups.map(t=>`<div class="agrp"><button class="agrp-h ${t.warn?"warn":""}" data-open="theme:${esc(t.id)}" type="button"><span class="dot ${t.warn?"warn":""}"></span><b>${esc(t.title)}</b><span class="dim" style="font-size:12px">${t.vis.length} project${t.vis.length>1?"s":""}${t.attn.length?` · ${t.attn.length} need attention`:""}</span></button><div class="cards">${t.vis.map(pcard).join("")}</div></div>`).join("")}`;
+    ${groups.map(t=>`<div class="agrp"><button class="agrp-h" data-open="theme:${esc(t.id)}" type="button"><b>${esc(t.title)}</b><span class="dim" style="font-size:12px">${t.vis.length} project${t.vis.length>1?"s":""}${t.attn.length?` · <span class="lc">${t.attn.length} need attention</span>`:""}</span></button><div class="cards">${t.vis.map(pcard).join("")}</div></div>`).join("")}`;
 }
 function themesHTML(d){
   return `<div class="spread"><h2>Themes</h2><span class="dim" style="font-size:12px">what projects roll up to · <span style="color:var(--warn)">●</span> needs attention</span></div>
@@ -857,7 +859,7 @@ function themesHTML(d){
     <span class="hrow" style="gap:8px"><span class="dot ${t.warn?"warn":""}"></span><span class="t">${esc(t.title)}</span></span>
     <span class="mono dim">${esc(t.id)}${t.due?" · due "+dd(t.due)+" "+mm(t.due):""}</span>
     <span class="chips"><span class="chip ok">${t.projs.length} project${t.projs.length===1?"":"s"}</span><span class="chip">${t.tasks.length} open tasks</span>${t.attn.length?`<span class="chip late">${t.attn.length} need attention</span>`:""}${t.due?"":`<span class="chip">no date</span>`}</span>
-  </button>`).join("")}${d.unfiled.length?`<button class="card tint warn" data-open="unfiled:1" type="button"><span class="hrow" style="gap:8px"><span class="dot warn"></span><span class="t">Not linked to any goal</span></span><span class="dim" style="font-size:12.5px">Open tasks with no goal above them. Link each under a goal and it moves into its project and theme.</span><span class="chips"><span class="chip late">${d.unfiled.length} tasks</span></span></button>`:""}</div>`;
+  </button>`).join("")}${d.unfiled.length?`<button class="card tint warn" data-open="unfiled:1" type="button"><span class="hrow" style="gap:8px"><span class="t">Not linked to any goal</span></span><span class="dim" style="font-size:12.5px">Open tasks with no goal above them. Link each under a goal and it moves into its project and theme.</span><span class="chips"><span class="chip">${d.unfiled.length} tasks</span></span></button>`:""}</div>`;
 }
 function peopleHTML(d){
   const tabs=[["people","Team",d.resources.length],["contacts","Contacts",d.contacts.length],["orgs","Companies",d.orgs.length],["topics","Topics",d.topics.length]];
