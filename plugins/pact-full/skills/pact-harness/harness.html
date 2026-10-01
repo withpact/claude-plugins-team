@@ -203,6 +203,16 @@ button.chip.src:hover{background:var(--p-soft);color:var(--p)}
 .item .rside{display:grid;justify-items:end;gap:1px;text-align:right}
 .item .rside small{font-size:11.5px;color:var(--ink-3)} .item .rside b{font-size:13px;font-weight:600;color:var(--head)}
 .box>.item:last-child{margin-bottom:12px}
+/* channels */
+.ch{display:inline-block;margin-left:6px;padding:0 7px;border-radius:999px;font:600 10.5px/1.6 var(--body);background:var(--surface-2);color:var(--ink-2);vertical-align:1px}
+.ch-whatsapp{background:#e2f7e9;color:#128c4a} .ch-slack{background:#f3e8f7;color:#7a2f8f} .ch-teams{background:#e8eafb;color:#4b53bc}
+.ch-email{background:#fdecea;color:#b3261e} .ch-granola{background:#fdf3d7;color:#8a6100}
+@media (prefers-color-scheme: dark){.ch-whatsapp{background:#123524;color:#5fd18e}.ch-slack{background:#2c1d33;color:#d39be6}.ch-teams{background:#1f2147;color:#9fa6ff}.ch-email{background:#3a1d1b;color:#f2a49c}.ch-granola{background:#33291a;color:#f3c35a}}
+.chfilter{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+.chfilter button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--ink-2)}
+.chfilter button[aria-pressed="true"]{background:var(--cta);color:var(--cta-ink);border-color:var(--cta)}
+.chfilter b{font-weight:600;opacity:.7}
+.origin{font-size:13px;color:var(--ink-2)}
 /* brief header */
 .banner.upd{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--p-soft)}
 .seg .addp{font-weight:600;color:var(--ink-3);min-width:30px}
@@ -240,7 +250,7 @@ button.chip.src:hover{background:var(--p-soft);color:var(--p)}
 <script>
 // The template's version. The page compares it with what the Pact server serves
 // (`harness_template`) and offers a one-click self-update when the server's is newer.
-const HARNESS_VERSION = "2026.10.02.1";
+const HARNESS_VERSION = "2026.10.02.2";
 // Filled in when the page is built (by /harness, or by the page's own update):
 // one entry per Pact connector; key = project name (from whoami), server = the
 // connector's display name.
@@ -591,6 +601,24 @@ function openSource(key){
     </div>`).join("")}</div>`).join("")}`);
 }
 
+/* ---------- channels: where a change came from ---------- */
+// The text wins over the tag: ingestion has tagged WhatsApp notes "teams-chat".
+const CHANNEL_RE=[["WhatsApp",/whats\s?app/i],["Slack",/\bslack\b/i],["Teams",/\bteams\b|teams-chat/i],["Email",/\b(gmail|e-?mail)\b/i],["Granola",/granola/i],["Meeting",/\b(meeting notes|transcript|call notes)\b/i]];
+function channelOf(e){
+  const txt=String(e.reason||""), src=String(e.source||"");
+  const head=txt.slice(0,160);
+  for(const [name,re] of CHANNEL_RE) if(re.test(head)) return name;
+  for(const [name,re] of CHANNEL_RE) if(re.test(src)) return name;
+  return null;
+}
+function originOf(entries){   // oldest-first not required; looks for the creation trace
+  for(const e of entries){ const m=String(e.reason||"").match(/^\s*Created from (WhatsApp|Slack|Teams|Gmail|Email|Granola|[A-Z][\w-]+)/i); if(m){ const c=channelOf({reason:m[0]}); return c||m[1]; } }
+  const cr=entries.find(e=>e.action==="created");
+  if(cr&&/^beads-mcp:/.test(cr.changed_by||"")) return "by hand";
+  return null;
+}
+const chanChip=c=>c?`<span class="ch ch-${esc(c.toLowerCase().replace(/\W/g,""))}">${esc(c)}</span>`:"";
+
 /* ---------- shaping ---------- */
 function shape(project,goals,open,doneGoals,history,historyErr,storedAt){
   const byId=new Map();
@@ -651,7 +679,9 @@ function shape(project,goals,open,doneGoals,history,historyErr,storedAt){
   const resources=[...res.values()].sort((a,b)=>(b.responsible.length+b.tasks.length)-(a.responsible.length+a.tasks.length));
   for(const r of resources) r.tasks.sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
 
-  return {project,goals,gById,open,doneGoals,projects,themes,tasks,unfiled,resources,people:[...people.values()].sort((a,b)=>b.items.length-a.items.length),closeCands,feed,fallbackFeed,historyErr,storedAt,byId};
+  const chan=new Map();   // bead id → Set of channels seen in the window
+  for(const e of (feed||[])){ const c=channelOf(e); if(!c) continue; e.channel=c; const id=(e.bead_id||"").replace("BEAD-","PACT-"); if(!chan.has(id)) chan.set(id,new Set()); chan.get(id).add(c); }
+  return {project,goals,gById,open,doneGoals,projects,themes,tasks,unfiled,resources,people:[...people.values()].sort((a,b)=>b.items.length-a.items.length),closeCands,feed,fallbackFeed,historyErr,storedAt,byId,chan};
 }
 
 /* ---------- rendering ---------- */
@@ -664,7 +694,8 @@ function rowHTML(b,extra,why){
   const subCls=/late/i.test(sub)?"late":b.status;
   const who=b.assignee&&b.assignee!=="unassigned"&&b.assignee!=="—"?b.assignee:"";
   const side=extra!==undefined?extra:(who?`<small>${late?"Owner":"Assigned"}</small><b>${esc(first(who))}</b>`:(b.due?`<small>Due</small><b>${esc(fmtDay(b.due))}</b>`:""));
-  return `<div class="item" data-id="${esc(b.id)}" tabindex="0" role="button"><div><div class="rid">${esc(b.id)}</div><div class="rt">${esc(b.title)}</div>${sub?`<div class="rsub"><span class="sd ${esc(subCls)}"></span>${esc(sub)}</div>`:""}</div><div class="rside">${side||""}</div></div>`;
+  const cs=data&&data.chan&&data.chan.get(b.id); const chip=cs?[...cs].map(chanChip).join(""):"";
+  return `<div class="item" data-id="${esc(b.id)}" tabindex="0" role="button"><div><div class="rid">${esc(b.id)}${chip}</div><div class="rt">${esc(b.title)}</div>${sub?`<div class="rsub"><span class="sd ${esc(subCls)}"></span>${esc(sub)}</div>`:""}</div><div class="rside">${side||""}</div></div>`;
 }
 function renderTabs(){
   const d=data; const n={myday:(d.myday?d.myday.count:0),activity:(d.feed||d.fallbackFeed).length,projects:d.projects.length,themes:d.themes.length,people:d.resources.length,archive:d.doneGoals.length};
@@ -692,6 +723,7 @@ function describe(h){
   if(c.status) return `${st(c.status.from)} → ${st(c.status.to)}`;
   const keys=Object.keys(c); return keys.length?"changed "+keys.join(", "):h.action||"change";
 }
+let CHF=null;   // Activity channel filter
 function activityHTML(d){
   let h="";
   h+=`<div class="box"><div class="box-h"><h2>Ready to close</h2><span class="dim">${d.closeCands.length}</span></div>`;
@@ -700,9 +732,13 @@ function activityHTML(d){
   h+=`</div>`;
   h+=sourcesHTML(d);
   if(d.unfiled.length) h+=`<div class="banner">${d.unfiled.length} open task${d.unfiled.length>1?"s":""} aren't under any goal — <button class="btn" data-open="unfiled:1" type="button">see which</button></div>`;
-  const feed=d.feed||d.fallbackFeed;
+  const all=d.feed||d.fallbackFeed;
+  const present=[...new Set(all.map(e=>e.channel).filter(Boolean))];
+  if(CHF&&!present.includes(CHF)) CHF=null;
+  const feed=CHF?all.filter(e=>e.channel===CHF):all;
   if(!d.feed) h+=`<div class="banner">Showing goal notes only. The full history (status moves, creations, every note) needs the <b>list_history</b> tool — reconnect ${esc(PROJECTS[d.project].server)} once it's deployed.</div>`;
   h+=`<div class="box"><div class="box-h"><h2>Last 14 days</h2><span class="dim">${feed.length} changes</span></div>`;
+  if(present.length) h+=`<div class="chfilter"><button type="button" data-chf="" aria-pressed="${!CHF}">All</button>${present.map(c=>`<button type="button" data-chf="${esc(c)}" aria-pressed="${CHF===c}">${esc(c)} <b>${all.filter(e=>e.channel===c).length}</b></button>`).join("")}</div>`;
   if(!feed.length) h+=`<div class="empty">Nothing changed in the window.</div>`;
   let day="";
   for(const e of feed.slice(0,250)){
@@ -710,7 +746,7 @@ function activityHTML(d){
     if(dd!==day){day=dd;h+=`<div class="day">${esc(fmtDay(dd))}</div>`}
     const what=describe(e); const cls=e.action==="note"?"note":(e.changes?.status?.to||"");
     const txt=e.action==="note"||e.reason?String(e.reason).slice(0,180):"";
-    h+=`<div class="row" data-id="${esc((e.bead_id||"").replace("BEAD-","PACT-"))}" tabindex="0" role="button"><span class="k ${esc(cls)}">${esc(what)}</span><span class="t"><span class="mono dim">${esc((e.bead_id||"").replace("BEAD-","PACT-"))}</span> ${esc(e.title||"")}${txt?`<br><span class="who">${esc(txt)}${String(e.reason).length>180?"…":""}</span>`:""}</span><span class="s">${esc(short(e.changed_by))}${String(e.timestamp).length>10?" · "+esc(fmtTime(e.timestamp)):""}</span></div>`;
+    h+=`<div class="row" data-id="${esc((e.bead_id||"").replace("BEAD-","PACT-"))}" tabindex="0" role="button"><span class="k ${esc(cls)}">${esc(what)}</span><span class="t"><span class="mono dim">${esc((e.bead_id||"").replace("BEAD-","PACT-"))}</span>${chanChip(e.channel)} ${esc(e.title||"")}${txt?`<br><span class="who">${esc(txt)}${String(e.reason).length>180?"…":""}</span>`:""}</span><span class="s">${esc(short(e.changed_by))}${String(e.timestamp).length>10?" · "+esc(fmtTime(e.timestamp)):""}</span></div>`;
   }
   return h+`</div>`;
 }
@@ -953,6 +989,10 @@ async function openDrawer(id){
   const isGoal=P.type==="goal"||P.type==="milestone";
   let h=drHead(id+(P.alias?" · "+P.alias:""),isGoal?shortTitle(P.title||b.title||id):(P.title||b.title||id));
   h+=`<div class="chips">${chipSt(st)}<span class="chip ${late?"late":""}">${esc(lateTxt)}</span>${f.assignee?`<span class="chip">${esc(first(f.assignee))} owns it</span>`:""}${f.approver&&f.approver!==f.assignee?`<span class="chip">${esc(first(f.approver))} approves</span>`:""}</div>`;
+  { const ents=[...(hist||[]),...P.notes.map(n=>({action:"note",reason:n.text,source:"",changed_by:n.who}))];
+    const origin=originOf(ents.slice().reverse());
+    const via=[...new Set(ents.filter(e=>!/^\s*Created from/i.test(String(e.reason||""))).map(channelOf).filter(Boolean))];
+    if(origin||via.length) h+=`<div class="origin">${origin?`Created ${origin==="by hand"?"by hand":`from ${chanChip(origin)}`}`:""}${origin&&via.length?" · ":""}${via.length?`updates via ${via.map(chanChip).join(" ")}`:""}</div>`; }
   if(parent) h+=`<button class="crumb" data-id="${esc(parent.id)}" type="button">↑ Part of <b>${esc(shortTitle(parent.title))}</b></button>`;
   if(dw) h+=`<div class="dbox"><span class="eb">Done when</span>${dw.bullets?`<ul class="tight">${dw.bullets.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>${dw.more>0?`<span class="who">+${dw.more} more</span>`:""}`:`<div>${esc(dw.text)}</div>`}</div>`;
   else h+=`<div class="dbox warn"><span class="eb">Done when</span>Not written down yet.</div>`;
@@ -1059,10 +1099,11 @@ document.addEventListener("click",e=>{
   const cp=e.target.closest("[data-copy]");
   if(cp){ const v=cp.dataset.copy; const isAdd=cp.classList.contains("addp");
     navigator.clipboard.writeText(v).then(()=>{ if(isAdd) $("#note").innerHTML=`<div class="banner">Copied — paste it in the chat and Claude will add the project here.</div>`; else cp.textContent="Copied — paste in chat"; },()=>{$("#note").innerHTML=`<div class="banner"><b>Paste this in the chat:</b><br>${esc(v)}</div>`;closeDrawer()}); return; }
-  const t=e.target.closest("[data-proj],[data-tab],[data-hz],[data-approve],[data-ask],[data-notify],[data-send],[data-id]");
+  const t=e.target.closest("[data-proj],[data-tab],[data-hz],[data-chf],[data-approve],[data-ask],[data-notify],[data-send],[data-id]");
   if(!t) return;
   if(t.dataset.proj){ if(t.dataset.proj===state.project) return; state.project=t.dataset.proj; store.set("hs.project",state.project); document.querySelectorAll("[data-proj]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.proj===state.project)); data=null; if(mcp) load(false); return; }
   if(t.dataset.tab){ state.tab=t.dataset.tab; store.set("hs.tab",state.tab); render(); return; }
+  if(t.dataset.chf!==undefined){ CHF=t.dataset.chf||null; render(); return; }
   if(t.dataset.hz){ HZ=t.dataset.hz; store.set("hs.hz",HZ); render(); return; }
   if(t.dataset.approve){ approve(t); return; }
   if(t.dataset.ask!==undefined){ askClaude(t); return; }
