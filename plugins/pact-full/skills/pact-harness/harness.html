@@ -260,7 +260,7 @@ button.chip.linkc{border:0;cursor:pointer} button.chip.linkc:hover{background:va
 <script>
 // The template's version. The page compares it with what the Pact server serves
 // (`harness_template`) and offers a one-click self-update when the server's is newer.
-const HARNESS_VERSION = "2026.10.02.5";
+const HARNESS_VERSION = "2026.10.07.1";
 // Filled in when the page is built (by /harness, or by the page's own update):
 // one entry per Pact connector; key = project name (from whoami), server = the
 // connector's display name.
@@ -1227,6 +1227,7 @@ const SKELETON_HEAD='<!doctype html><html><head><meta charset=utf8><meta name=vi
 const jsLit=v=>JSON.stringify(v).replace(/</g,"\\u003c");
 let UPDATE=null;
 async function checkUpdate(){
+  if(window.__HARNESS_LOADER__) return;   // mounted by the loader: it always fetches the latest
   let best=null;
   for(const k of SHOWN){
     try{

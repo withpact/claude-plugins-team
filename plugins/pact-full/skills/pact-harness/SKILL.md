@@ -11,18 +11,18 @@ description: >-
   pact by itself.
 ---
 
-# Pact Harness v0.4.3
+# Pact Harness v0.5.0
 
 The harness is one HTML page. It calls the **viewer's own** Pact connectors
 from inside the page (the artifact's `mcp` capability), so every person needs
 their own copy in their own account. A page shared across organizations can't
-use the viewer's connectors. Your job is to fetch the template, fill in its
-four placeholders and publish it. Do not redesign the page, and do not paste
+use the viewer's connectors. Your job is to fill in the four placeholders of a
+small loader page and publish it. Do not redesign the page, and do not paste
 pact data into it: it loads everything live.
 
-The page updates itself. When Pact ships a newer template, the page shows
-"A new version of the harness is ready" with an **Update** button, and one
-click republishes it in place. Nobody has to update a plugin for that.
+The page keeps itself current: it loads the latest harness from the Pact
+server every time it opens. Nobody republishes it or updates a plugin for a
+new design.
 
 ## 1. Find the user's Pact connectors
 
@@ -39,17 +39,68 @@ Each Pact connector is a beads-api server. You can recognise one by its tools
 - With no Pact connector, stop. Tell them to add their Pact connector in
   claude.ai → Settings → Connectors first.
 
-## 2. Get the template
+## 2. Write the page from this loader
 
-Call `harness_template` (no arguments) on any of those connectors. It returns
-JSON `{version, html}`; `html` is the template. If no connector has the tool
-yet, use `harness.html` next to this file instead. It is the same template, as
-of this plugin's release.
+The page you publish is a small **loader**, not the full harness. When it opens, it
+asks the viewer's Pact connector for the latest harness (`harness_template`) and
+mounts it in place. So the page is always current, and you never copy the big
+template: in claude.ai a 100 KB copy gets cut off, and the page then shows a bare
+header with no data.
+
+Copy this loader exactly, byte for byte, into a working file named
+`harness-<first-project>.html`:
+
+```html
+<title>__TITLE__</title>
+<div id="boot" style="font:14px system-ui,sans-serif;color:#6b6a65;padding:32px 20px;text-align:center">Loading your Management Harness…</div>
+<script>
+// Pact harness loader. The page itself is tiny: on open it asks the viewer's Pact
+// connector for the latest harness (`harness_template`) and mounts it here, so it is
+// always current and nobody republishes or updates a plugin to get a new design.
+const CONFIG = {projects: __PROJECTS__, channels: __CHANNELS__, options: __OPTIONS__};
+(async () => {
+  const boot = document.getElementById("boot");
+  const say = (t) => { boot.textContent = t; };
+  const mcp = window.claude ? await window.claude.use("mcp") : null;
+  if (!mcp) return say("Open this page in claude.ai with your Pact connector to see your harness.");
+  let best = null, why = "";
+  for (const p of Object.values(CONFIG.projects)) {
+    try {
+      const r = await mcp.callTool(p.server, "harness_template", {}, {cache: {staleTime: 600000, gcTime: 86400000}});
+      const t = r && r.payload;
+      if (t && t.html && (!best || t.version > best.version)) best = t;
+    } catch (e) {
+      why = e && e.code === "server_not_connected" ? `Add ${p.server} in claude.ai Settings → Connectors.`
+          : e && e.code === "needs_reauth" ? `Reconnect ${p.server} in claude.ai Settings → Connectors.`
+          : e && e.code === "selection_required" ? `Pick which ${p.server} connector to use when claude.ai asks, then reload.`
+          : e && (e.code === "tool_error" || e.code === "bad_request") ? `${p.server} doesn't serve the harness yet. Ask the Pact team to deploy it.`
+          : (e && e.message) || "The connector didn't answer.";
+    }
+  }
+  if (!best) return say(why || "Your Pact connector didn't return the harness.");
+  const tok = (k) => "__" + k + "__";
+  const lit = (v) => JSON.stringify(v).replace(/</g, "\\u003c");
+  const html = best.html
+    .replace(tok("PROJECTS"), lit(CONFIG.projects))
+    .replace(tok("CHANNELS"), lit(CONFIG.channels))
+    .replace(tok("OPTIONS"), lit(CONFIG.options))
+    .replace(tok("TITLE"), document.title.replace(/[&<>]/g, ""));
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  window.__HARNESS_LOADER__ = best.version;
+  for (const el of doc.querySelectorAll("link[rel=stylesheet],link[rel=preconnect],style")) document.head.appendChild(document.importNode(el, true));
+  const scripts = [...doc.body.querySelectorAll("script")];
+  scripts.forEach((s) => s.remove());
+  boot.remove();
+  for (const n of [...doc.body.childNodes]) document.body.appendChild(document.importNode(n, true));
+  for (const s of scripts) { const x = document.createElement("script"); x.textContent = s.textContent; document.body.appendChild(x); }
+})().catch((e) => { const b = document.getElementById("boot"); if (b) b.textContent = "The harness failed to load: " + ((e && e.message) || e); });
+</script>
+```
 
 ## 3. Fill the placeholders
 
-The template has four tokens, each appearing exactly once. Replace each one
-and change nothing else.
+The loader has four tokens, each appearing exactly once. Replace each one and
+change nothing else.
 
 | Token | Replace with |
 |---|---|
@@ -62,7 +113,9 @@ and change nothing else.
 - `server`: the exact connector display name.
 - `title`: `<label> — Management Harness`.
 
-Write the result to a working file named `harness-<first-project>.html`.
+Never paste the full template (`harness.html`, or what `harness_template`
+returns) into the page. That file is only for reference and for older harness
+copies.
 
 ## 4. Publish
 
@@ -82,14 +135,15 @@ Publish it with your Artifact tool (icon `dashboard`) and these capabilities:
 
 - Include the Slack and Gmail entries only for connectors the user has, and
   name the same ones in `__CHANNELS__`.
-- `artifact` lets the page republish itself when the user clicks Update.
+- `artifact` lets older full-template copies republish themselves; keep it.
 - `sample` lets the page write one-line "Latest" summaries. It runs on the
   viewer's account and asks consent once; without it the page shows a cleaned
   excerpt instead.
 - If the user already has a harness artifact, **update that one** (pass its
   URL) instead of creating a second. Read it first, keep every project already
-  in its `PROJECTS`, and add the new ones. The page's "+" button copies exactly
-  that request into the chat.
+  in its `PROJECTS` (or `CONFIG.projects` in a loader page), and add the new
+  ones. If it is an older full-template page, replace it with the loader.
+  The page's "+" button copies exactly that request into the chat.
 - If this surface has no Artifact tool, or it can't declare capabilities, say
   so plainly. Point them to Claude Code or Cowork, where it can. Never fall back
   to a static page with data pasted in.
@@ -104,7 +158,7 @@ Open it beside the conversation and tell the user, in one or two lines:
 - **Approve close** really closes the goal: it writes an evidence note, then
   sets the goal `done`. "Start follow-up" writes a Slack or Gmail **draft**,
   so nothing is sent until they send it.
-- New versions arrive as an **Update** button on the page itself.
+- New versions show up on their own the next time the page opens.
 
 Never share one person's harness with someone in another organization. Their
 connectors won't work there; they need their own copy, made with /harness.
