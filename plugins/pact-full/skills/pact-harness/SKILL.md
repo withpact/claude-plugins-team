@@ -11,7 +11,7 @@ description: >-
   pact by itself.
 ---
 
-# Pact Harness v0.5.0
+# Pact Harness v0.5.1
 
 The harness is one HTML page. It calls the **viewer's own** Pact connectors
 from inside the page (the artifact's `mcp` capability), so every person needs
@@ -113,9 +113,8 @@ change nothing else.
 - `server`: the exact connector display name.
 - `title`: `<label> — Management Harness`.
 
-Never paste the full template (`harness.html`, or what `harness_template`
-returns) into the page. That file is only for reference and for older harness
-copies.
+Never paste the full template (what `harness_template` returns) into the
+page. The loader fetches it by itself.
 
 ## 4. Publish
 
