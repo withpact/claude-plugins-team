@@ -11,7 +11,7 @@ description: >-
   pact by itself.
 ---
 
-# Pact Harness v0.5.2
+# Pact Harness v0.5.3
 
 The harness is one HTML page. It calls the **viewer's own** Pact connectors
 from inside the page (the artifact's `mcp` capability), so every person needs
@@ -125,7 +125,7 @@ Publish it with your Artifact tool (icon `dashboard`) and these capabilities:
   "artifact": {},
   "sample": {},
   "mcp": {"servers": [
-    {"server": "<Pact display name>", "tools": ["whoami", "list_goals", "list_beads", "get_bead", "list_history", "graph_read", "add_note", "update_status", "message_user", "harness_template"]},
+    {"server": "<Pact display name>", "tools": ["whoami", "list_goals", "list_beads", "get_bead", "list_history", "graph_read", "add_note", "update_status", "reschedule_bead", "message_user", "harness_template"]},
     {"server": "<Slack display name>", "tools": ["slack_search_users", "slack_send_message_draft", "slack_send_message"]},
     {"server": "<Gmail display name>", "tools": ["create_draft"]}
   ]}
