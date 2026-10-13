@@ -11,7 +11,7 @@ description: >-
   pact by itself.
 ---
 
-# Pact Harness v0.5.3
+# Pact Harness v0.5.4
 
 The harness is one HTML page. It calls the **viewer's own** Pact connectors
 from inside the page (the artifact's `mcp` capability), so every person needs
@@ -105,7 +105,7 @@ change nothing else.
 | Token | Replace with |
 |---|---|
 | `__PROJECTS__` | a JS object, one entry per connector, keyed by the project name from `whoami`: `{"pactmd": {"label": "Pact", "server": "Pact MCP", "title": "Pact — Management Harness"}}` |
-| `__CHANNELS__` | the display names of the user's Slack and Gmail connectors, `null` for one they don't have: `{"slack": "Slack", "gmail": null}`. A Slack connector has `slack_search_users`, `slack_send_message_draft` and `slack_send_message`; a Gmail connector has `create_draft`. |
+| `__CHANNELS__` | the display names of the user's Slack, Gmail and Google Drive connectors, `null` for one they don't have: `{"slack": "Slack", "gmail": null, "drive": "Google Drive"}`. A Slack connector has `slack_search_users`, `slack_send_message_draft` and `slack_send_message`; a Gmail connector has `create_draft`; a Google Drive connector has `read_file_content`. |
 | `__OPTIONS__` | `{"add": true}` (shows the "+" that asks you to add a project) |
 | `__TITLE__` | `Management Harness` |
 
@@ -125,15 +125,19 @@ Publish it with your Artifact tool (icon `dashboard`) and these capabilities:
   "artifact": {},
   "sample": {},
   "mcp": {"servers": [
-    {"server": "<Pact display name>", "tools": ["whoami", "list_goals", "list_beads", "get_bead", "list_history", "graph_read", "add_note", "update_status", "reschedule_bead", "message_user", "harness_template"]},
+    {"server": "<Pact display name>", "tools": ["whoami", "list_goals", "list_beads", "get_bead", "list_history", "graph_read", "graph_run_start", "graph_ingest", "graph_run_end", "add_note", "update_status", "reschedule_bead", "message_user", "harness_template"]},
     {"server": "<Slack display name>", "tools": ["slack_search_users", "slack_send_message_draft", "slack_send_message"]},
-    {"server": "<Gmail display name>", "tools": ["create_draft"]}
+    {"server": "<Gmail display name>", "tools": ["create_draft"]},
+    {"server": "<Google Drive display name>", "tools": ["read_file_content"]}
   ]}
 }
 ```
 
-- Include the Slack and Gmail entries only for connectors the user has, and
-  name the same ones in `__CHANNELS__`.
+- Include the Slack, Gmail and Google Drive entries only for connectors the
+  user has, and name the same ones in `__CHANNELS__`.
+- `graph_run_start`, `graph_ingest` and `graph_run_end` back the **Ingest**
+  tab, where the user hands a document or a note to a pipeline by hand after
+  confirming the project and pipeline. Google Drive lets it read a Doc link.
 - `artifact` lets older full-template copies republish themselves; keep it.
 - `sample` lets the page write one-line "Latest" summaries. It runs on the
   viewer's account and asks consent once; without it the page shows a cleaned
