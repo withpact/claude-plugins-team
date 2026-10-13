@@ -11,7 +11,7 @@ description: >-
   pact by itself.
 ---
 
-# Pact Harness v0.5.1
+# Pact Harness v0.5.2
 
 The harness is one HTML page. It calls the **viewer's own** Pact connectors
 from inside the page (the artifact's `mcp` capability), so every person needs
@@ -105,7 +105,7 @@ change nothing else.
 | Token | Replace with |
 |---|---|
 | `__PROJECTS__` | a JS object, one entry per connector, keyed by the project name from `whoami`: `{"pactmd": {"label": "Pact", "server": "Pact MCP", "title": "Pact — Management Harness"}}` |
-| `__CHANNELS__` | the display names of the user's Slack and Gmail connectors, `null` for one they don't have: `{"slack": "Slack", "gmail": null}`. A Slack connector has `slack_search_users` and `slack_send_message_draft`; a Gmail connector has `create_draft`. |
+| `__CHANNELS__` | the display names of the user's Slack and Gmail connectors, `null` for one they don't have: `{"slack": "Slack", "gmail": null}`. A Slack connector has `slack_search_users`, `slack_send_message_draft` and `slack_send_message`; a Gmail connector has `create_draft`. |
 | `__OPTIONS__` | `{"add": true}` (shows the "+" that asks you to add a project) |
 | `__TITLE__` | `Management Harness` |
 
@@ -126,7 +126,7 @@ Publish it with your Artifact tool (icon `dashboard`) and these capabilities:
   "sample": {},
   "mcp": {"servers": [
     {"server": "<Pact display name>", "tools": ["whoami", "list_goals", "list_beads", "get_bead", "list_history", "graph_read", "add_note", "update_status", "message_user", "harness_template"]},
-    {"server": "<Slack display name>", "tools": ["slack_search_users", "slack_send_message_draft"]},
+    {"server": "<Slack display name>", "tools": ["slack_search_users", "slack_send_message_draft", "slack_send_message"]},
     {"server": "<Gmail display name>", "tools": ["create_draft"]}
   ]}
 }
