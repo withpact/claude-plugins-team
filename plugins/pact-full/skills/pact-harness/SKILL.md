@@ -11,7 +11,7 @@ description: >-
   pact by itself.
 ---
 
-# Pact Harness v0.5.4
+# Pact Harness v0.5.5
 
 The harness is one HTML page. It calls the **viewer's own** Pact connectors
 from inside the page (the artifact's `mcp` capability), so every person needs
@@ -125,7 +125,7 @@ Publish it with your Artifact tool (icon `dashboard`) and these capabilities:
   "artifact": {},
   "sample": {},
   "mcp": {"servers": [
-    {"server": "<Pact display name>", "tools": ["whoami", "list_goals", "list_beads", "get_bead", "list_history", "graph_read", "graph_run_start", "graph_ingest", "graph_run_end", "add_note", "update_status", "reschedule_bead", "message_user", "harness_template"]},
+    {"server": "<Pact display name>", "tools": ["whoami", "list_goals", "list_beads", "get_bead", "list_history", "graph_read", "graph_run_start", "graph_ingest", "graph_run_end", "add_note", "update_status", "reschedule_bead", "create_bead", "update_bead", "message_user", "harness_template"]},
     {"server": "<Slack display name>", "tools": ["slack_search_users", "slack_send_message_draft", "slack_send_message"]},
     {"server": "<Gmail display name>", "tools": ["create_draft"]},
     {"server": "<Google Drive display name>", "tools": ["read_file_content"]}
@@ -138,6 +138,9 @@ Publish it with your Artifact tool (icon `dashboard`) and these capabilities:
 - `graph_run_start`, `graph_ingest` and `graph_run_end` back the **Ingest**
   tab, where the user hands a document or a note to a pipeline by hand after
   confirming the project and pipeline. Google Drive lets it read a Doc link.
+- `create_bead` and `update_bead` back **Create these in Pact** in a goal's
+  close check: the gap tasks are created under the goal (its `depends_on`)
+  after the user confirms owner, approver and date.
 - `artifact` lets older full-template copies republish themselves; keep it.
 - `sample` lets the page write one-line "Latest" summaries. It runs on the
   viewer's account and asks consent once; without it the page shows a cleaned
